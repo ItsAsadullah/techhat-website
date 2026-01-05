@@ -1,0 +1,152 @@
+<?php
+require_once '../core/db.php';
+require_once '../core/auth.php';
+
+// Admin check
+if (!is_logged_in() || !is_admin()) {
+    header("Location: ../login.php");
+    exit;
+}
+
+$message = '';
+$error = '';
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        $settings = [
+            'site_name' => $_POST['site_name'],
+            'site_tagline' => $_POST['site_tagline'] ?? '',
+            'site_logo' => $_POST['site_logo'] ?? '',
+            'site_favicon' => $_POST['site_favicon'] ?? '',
+        ];
+        
+        foreach ($settings as $key => $value) {
+            $stmt = $pdo->prepare("INSERT INTO homepage_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+            $stmt->execute([$key, $value, $value]);
+        }
+        
+        $message = "Site branding settings updated successfully!";
+    } catch (PDOException $e) {
+        $error = "Error updating settings: " . $e->getMessage();
+    }
+}
+
+// Fetch current settings
+$stmt = $pdo->query("SELECT setting_key, setting_value FROM homepage_settings WHERE setting_key IN ('site_name', 'site_tagline', 'site_logo', 'site_favicon')");
+$settings = [];
+while ($row = $stmt->fetch()) {
+    $settings[$row['setting_key']] = $row['setting_value'];
+}
+
+function getSetting($settings, $key, $default = '') {
+    return $settings[$key] ?? $default;
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Branding Settings - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body class="bg-gray-100">
+    
+    <div class="flex">
+        <?php include 'partials/sidebar.php'; ?>
+        
+        <div class="flex-1 ml-0 lg:ml-[280px] p-4 lg:p-8">
+            <div class="max-w-4xl mx-auto">
+                <!-- Header -->
+                <div class="mb-8">
+                    <div class="flex items-center gap-3 mb-2">
+                        <a href="settings.php" class="text-gray-400 hover:text-gray-600">
+                            <i class="bi bi-arrow-left text-xl"></i>
+                        </a>
+                        <h1 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                            <i class="bi bi-shop text-blue-600"></i>
+                            Site Branding Settings
+                        </h1>
+                    </div>
+                    <p class="text-gray-600 ml-10">Configure your website name, logo, and branding elements</p>
+                </div>
+
+                <!-- Messages -->
+                <?php if ($message): ?>
+                    <div class="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center gap-2">
+                        <i class="bi bi-check-circle-fill text-xl"></i>
+                        <span><?php echo $message; ?></span>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($error): ?>
+                    <div class="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center gap-2">
+                        <i class="bi bi-exclamation-triangle-fill text-xl"></i>
+                        <span><?php echo $error; ?></span>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Form -->
+                <form method="POST" class="space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="bi bi-building text-blue-600"></i> Website Name <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" name="site_name" value="<?php echo htmlspecialchars(getSetting($settings, 'site_name', 'TechHat')); ?>" 
+                                       class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500" 
+                                       placeholder="TechHat" required>
+                                <p class="mt-1 text-xs text-gray-500">This appears in the header and browser title</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="bi bi-quote text-blue-600"></i> Site Tagline
+                                </label>
+                                <input type="text" name="site_tagline" value="<?php echo htmlspecialchars(getSetting($settings, 'site_tagline', 'Your Tech Shopping Destination')); ?>" 
+                                       class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500" 
+                                       placeholder="Your Tech Shopping Destination">
+                                <p class="mt-1 text-xs text-gray-500">A short description or slogan for your website</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="bi bi-image text-blue-600"></i> Logo URL
+                                </label>
+                                <input type="text" name="site_logo" value="<?php echo htmlspecialchars(getSetting($settings, 'site_logo', '')); ?>" 
+                                       class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500" 
+                                       placeholder="assets/images/logo.png">
+                                <p class="mt-1 text-xs text-gray-500">Path to your website logo (recommended size: 200x60px)</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="bi bi-star text-blue-600"></i> Favicon URL
+                                </label>
+                                <input type="text" name="site_favicon" value="<?php echo htmlspecialchars(getSetting($settings, 'site_favicon', '')); ?>" 
+                                       class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500" 
+                                       placeholder="assets/images/favicon.ico">
+                                <p class="mt-1 text-xs text-gray-500">Path to your favicon (recommended: 32x32px .ico or .png)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="flex gap-3">
+                        <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2">
+                            <i class="bi bi-save"></i> Save Settings
+                        </button>
+                        <a href="settings.php" class="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors flex items-center gap-2">
+                            <i class="bi bi-x-lg"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

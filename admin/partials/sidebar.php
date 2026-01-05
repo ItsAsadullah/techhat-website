@@ -9,7 +9,7 @@ $menu = [
     ['href' => 'purchases.php', 'label' => 'Purchases', 'icon' => 'bi-cart-plus'],
     ['href' => 'accounts.php', 'label' => 'Accounts', 'icon' => 'bi-currency-dollar'],
     ['href' => 'banners.php', 'label' => 'Banners', 'icon' => 'bi-images'],
-    ['href' => 'homepage_settings.php', 'label' => 'Settings', 'icon' => 'bi-gear-fill'],
+    ['href' => 'settings.php', 'label' => 'Settings', 'icon' => 'bi-gear-fill'],
 ];
 ?>
 

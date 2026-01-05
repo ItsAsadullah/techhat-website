@@ -64,49 +64,68 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
         
         body { 
             font-family: 'Inter', sans-serif; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            background-attachment: fixed;
+            background: #f8f9fa;
         }
         
-        /* Glassmorphism - Lightweight */
-        .glass {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.18);
+        /* Modern Clean Cards */
+        .clean-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
-        .glass-white {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+        .clean-card:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
         }
         
-        /* Hover Effects - Simple */
-        .hover-lift {
-            transition: transform 0.2s ease;
-        }
-        
-        .hover-lift:hover {
-            transform: translateY(-4px);
-        }
-        
-        /* Product Card */
+        /* Product Card - Optimized */
         .product-card {
             background: white;
-            transition: all 0.2s ease;
+            border: 1px solid #e9ecef;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         
         .product-card:hover {
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
         }
         
-        /* Gradient Text */
-        .gradient-text {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        /* Accent Color - TechHat Logo Theme */
+        .accent-primary {
+            background: linear-gradient(135deg, #D4145A 0%, #C41E3A 100%);
         }
         
-        /* Carousel */
+        .accent-secondary {
+            background: #0066CC;
+        }
+        
+        .accent-text {
+            color: #D4145A;
+        }
+        
+        .accent-text-blue {
+            color: #0066CC;
+        }
+        
+        .accent-border {
+            border-color: #D4145A;
+        }
+        
+        /* Category Pills */
+        .category-pill {
+            background: white;
+            border: 1px solid #e9ecef;
+            transition: all 0.2s ease;
+        }
+        
+        .category-pill:hover {
+            background: linear-gradient(135deg, #D4145A 0%, #C41E3A 100%);
+            color: white;
+            border-color: #D4145A;
+        }
+        
+        /* Carousel - No Blur */
         .carousel-container {
             position: relative;
             overflow: hidden;
@@ -114,36 +133,44 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
         
         .carousel-slide {
             display: none;
-            animation: fadeIn 0.5s;
         }
         
         .carousel-slide.active {
             display: block;
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
         .carousel-btn {
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            background: rgba(255, 255, 255, 0.8);
-            border: none;
-            padding: 1rem;
+            background: white;
+            border: 1px solid #e9ecef;
+            padding: 0.75rem;
             cursor: pointer;
             border-radius: 50%;
             z-index: 10;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
         
         .carousel-btn:hover {
-            background: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
         
         .carousel-btn.prev { left: 1rem; }
         .carousel-btn.next { right: 1rem; }
+        
+        /* Feature Card */
+        .feature-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            transition: all 0.2s ease;
+        }
+        
+        .feature-card:hover {
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -156,7 +183,7 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
         <!-- Carousel Banner Section -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <!-- Carousel -->
-            <div class="md:col-span-2 carousel-container glass-white rounded-2xl overflow-hidden relative" style="height: 350px;">
+            <div class="md:col-span-2 carousel-container clean-card rounded-xl overflow-hidden relative" style="height: 350px;">
                 <?php if(!empty($banners)): ?>
                     <?php foreach($banners as $index => $banner): ?>
                     <div class="carousel-slide <?php echo $index === 0 ? 'active' : ''; ?>" style="height: 100%;">
@@ -195,7 +222,7 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
             </div>
             
             <!-- Flash Deal Card -->
-            <div class="glass-white rounded-2xl p-6 hover-lift bg-gradient-to-br from-purple-600 to-indigo-600 text-white">
+            <div class="clean-card rounded-xl p-6 accent-primary text-white">
                 <i class="bi bi-lightning-charge-fill text-5xl mb-3 block"></i>
                 <h3 class="text-xl font-bold mb-2">Flash Deals</h3>
                 <p class="mb-4 opacity-90 text-sm">Limited Time Offers</p>
@@ -216,7 +243,7 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
         <div class="flex gap-2 mb-6 overflow-x-auto pb-2" style="scrollbar-width: none;">
             <?php foreach($categories as $cat): ?>
             <a href="category.php?id=<?php echo $cat['id']; ?>" 
-               class="glass-white px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap hover:bg-purple-600 hover:text-white transition-all">
+               class="category-pill px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap">
                 <?php echo htmlspecialchars($cat['name']); ?>
             </a>
             <?php endforeach; ?>
@@ -225,15 +252,15 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
         <!-- Specially for You Section -->
         <div class="mb-8">
             <div class="text-center mb-6">
-                <h2 class="text-3xl font-bold gradient-text inline-flex items-center gap-2">
+                <h2 class="text-3xl font-bold accent-text inline-flex items-center gap-2">
                     <i class="bi bi-bag-heart-fill"></i>
                     Specially for You
                 </h2>
-                <p class="text-white mt-2">Handpicked products curated just for you</p>
+                <p class="text-gray-600 mt-2">Handpicked products curated just for you</p>
             </div>
             
             <!-- Product Grid - Optimized -->
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
                 <?php foreach($products as $p): ?>
                 <?php 
                 $minEffective = (float) $p['min_effective'];
@@ -241,7 +268,7 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
                 $savePercent = ($p['min_regular'] && $p['min_regular'] > $minEffective) ? round((($p['min_regular'] - $minEffective) / $p['min_regular']) * 100) : 0;
                 ?>
                 <a href="product.php?slug=<?php echo $p['slug']; ?>" 
-                   class="product-card rounded-xl overflow-hidden shadow-md hover-lift">
+                   class="product-card rounded-lg overflow-hidden">
                     <!-- Product Image -->
                     <div class="relative bg-gray-50 p-3 h-40 flex items-center justify-center">
                         <?php if($savePercent > 0): ?>
@@ -266,7 +293,7 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
                         </h3>
                         
                         <div class="flex items-center gap-1 mb-2">
-                            <span class="text-lg font-bold gradient-text">
+                            <span class="text-lg font-bold accent-text">
                                 ৳<?php echo number_format($minEffective); ?>
                             </span>
                             <?php if($p['min_regular'] && $p['min_regular'] > $minEffective): ?>
@@ -276,7 +303,7 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
                             <?php endif; ?>
                         </div>
                         
-                        <button class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-1.5 px-3 rounded-lg font-semibold text-xs hover:shadow-lg transition-all">
+                        <button class="w-full accent-primary text-white py-1.5 px-3 rounded-lg font-semibold text-xs hover:opacity-90 transition-opacity">
                             <i class="bi bi-cart-plus"></i> Add
                         </button>
                     </div>
@@ -286,9 +313,9 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
         </div>
 
         <!-- SEO Content Section -->
-        <div class="glass-white rounded-3xl p-8 md:p-12 mb-12 shadow-2xl">
+        <div class="clean-card rounded-xl p-8 md:p-12 mb-8">
             <div class="text-center mb-8">
-                <i class="bi bi-shop text-6xl gradient-text mb-4 inline-block"></i>
+                <i class="bi bi-shop text-6xl accent-text mb-4 inline-block"></i>
                 <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
                     <?php echo htmlspecialchars($seoTitle); ?>
                 </h2>
@@ -314,8 +341,8 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
                 foreach($seoFeatures as $index => $feature): 
                     $icon = $featureIcons[$index % count($featureIcons)];
                 ?>
-                <div class="glass rounded-2xl p-4 text-center hover-lift">
-                    <i class="bi <?php echo $icon; ?> text-3xl gradient-text mb-2 block"></i>
+                <div class="feature-card rounded-lg p-4 text-center">
+                    <i class="bi <?php echo $icon; ?> text-3xl accent-text mb-2 block"></i>
                     <p class="font-semibold text-sm text-gray-700"><?php echo htmlspecialchars($feature); ?></p>
                 </div>
                 <?php endforeach; ?>
@@ -324,7 +351,7 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
             
             <!-- CTA Button -->
             <div class="text-center mt-8">
-                <a href="category.php" class="inline-flex items-center gap-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold px-10 py-4 rounded-full text-lg hover:shadow-2xl transition-all duration-300 hover-lift">
+                <a href="category.php" class="inline-flex items-center gap-3 accent-primary text-white font-bold px-10 py-4 rounded-full text-lg hover:opacity-90 transition-opacity">
                     <i class="bi bi-grid-3x3-gap-fill text-2xl"></i>
                     View All Products
                     <i class="bi bi-arrow-right text-2xl"></i>
@@ -335,25 +362,25 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
     </div>
 
     <!-- Footer -->
-    <footer class="glass-white mt-16 pt-12 pb-6">
+    <footer class="bg-white border-t mt-12 pt-12 pb-6">
         <div class="max-w-7xl mx-auto px-4">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
                 <!-- Company Info -->
                 <div class="md:col-span-1">
-                    <h3 class="text-2xl font-bold gradient-text mb-4">
+                    <h3 class="text-2xl font-bold accent-text mb-4">
                         <i class="bi bi-shop"></i> <?php echo htmlspecialchars($siteName); ?>™
                     </h3>
                     <p class="text-gray-600 mb-4 text-sm leading-relaxed">
                         <?php echo htmlspecialchars($settings['footer_about'] ?? 'Your premier destination for quality electronics and gadgets.'); ?>
                     </p>
                     <div class="flex gap-3">
-                        <a href="#" class="w-10 h-10 glass rounded-full flex items-center justify-center hover-lift hover:bg-purple-600 hover:text-white transition-all">
+                        <a href="#" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gradient-to-r hover:from-pink-600 hover:to-rose-600 hover:text-white transition-all">
                             <i class="bi bi-facebook"></i>
                         </a>
-                        <a href="#" class="w-10 h-10 glass rounded-full flex items-center justify-center hover-lift hover:bg-purple-600 hover:text-white transition-all">
+                        <a href="#" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gradient-to-r hover:from-pink-600 hover:to-rose-600 hover:text-white transition-all">
                             <i class="bi bi-instagram"></i>
                         </a>
-                        <a href="#" class="w-10 h-10 glass rounded-full flex items-center justify-center hover-lift hover:bg-purple-600 hover:text-white transition-all">
+                        <a href="#" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gradient-to-r hover:from-pink-600 hover:to-rose-600 hover:text-white transition-all">
                             <i class="bi bi-youtube"></i>
                         </a>
                     </div>
@@ -362,7 +389,7 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
                 <!-- Quick Links -->
                 <div>
                     <h4 class="font-bold text-gray-800 mb-4 text-lg flex items-center gap-2">
-                        <i class="bi bi-link-45deg gradient-text"></i> Quick Links
+                        <i class="bi bi-link-45deg accent-text"></i> Quick Links
                     </h4>
                     <ul class="space-y-2 text-sm">
                         <li><a href="index.php" class="text-gray-600 hover:text-purple-600 transition-colors flex items-center gap-2"><i class="bi bi-chevron-right"></i> Home</a></li>
@@ -375,7 +402,7 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
                 <!-- Categories -->
                 <div>
                     <h4 class="font-bold text-gray-800 mb-4 text-lg flex items-center gap-2">
-                        <i class="bi bi-grid-fill gradient-text"></i> Categories
+                        <i class="bi bi-grid-fill accent-text"></i> Categories
                     </h4>
                     <ul class="space-y-2 text-sm">
                         <?php 
@@ -396,25 +423,25 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
                 <!-- Customer Service -->
                 <div>
                     <h4 class="font-bold text-gray-800 mb-4 text-lg flex items-center gap-2">
-                        <i class="bi bi-headset gradient-text"></i> Customer Service
+                        <i class="bi bi-headset accent-text"></i> Customer Service
                     </h4>
                     <ul class="space-y-3 text-sm">
                         <li class="flex items-start gap-2 text-gray-600">
-                            <i class="bi bi-telephone-fill gradient-text mt-1"></i>
+                            <i class="bi bi-telephone-fill accent-text mt-1"></i>
                             <div>
                                 <div class="font-semibold text-gray-800">Phone</div>
                                 <?php echo htmlspecialchars($settings['footer_phone'] ?? '09678-300400'); ?>
                             </div>
                         </li>
                         <li class="flex items-start gap-2 text-gray-600">
-                            <i class="bi bi-envelope-fill gradient-text mt-1"></i>
+                            <i class="bi bi-envelope-fill accent-text mt-1"></i>
                             <div>
                                 <div class="font-semibold text-gray-800">Email</div>
                                 <?php echo htmlspecialchars($settings['footer_email'] ?? 'info@bdshop.com'); ?>
                             </div>
                         </li>
                         <li class="flex items-start gap-2 text-gray-600">
-                            <i class="bi bi-clock-fill gradient-text mt-1"></i>
+                            <i class="bi bi-clock-fill accent-text mt-1"></i>
                             <div>
                                 <div class="font-semibold text-gray-800">Business Hours</div>
                                 <?php echo htmlspecialchars($settings['footer_hours'] ?? '10:00 AM - 11:00 PM'); ?>
@@ -429,20 +456,20 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
                 <div class="flex flex-wrap items-center justify-center gap-4">
                     <span class="text-sm font-semibold text-gray-600">Secure Payment:</span>
                     <div class="flex gap-3">
-                        <div class="glass px-4 py-2 rounded-lg">
-                            <i class="bi bi-credit-card text-2xl gradient-text"></i>
+                        <div class="bg-gray-100 px-4 py-2 rounded-lg">
+                            <i class="bi bi-credit-card text-2xl accent-text"></i>
                         </div>
-                        <div class="glass px-4 py-2 rounded-lg">
-                            <span class="font-bold gradient-text">VISA</span>
+                        <div class="bg-gray-100 px-4 py-2 rounded-lg">
+                            <span class="font-bold accent-text">VISA</span>
                         </div>
-                        <div class="glass px-4 py-2 rounded-lg">
-                            <span class="font-bold gradient-text">Mastercard</span>
+                        <div class="bg-gray-100 px-4 py-2 rounded-lg">
+                            <span class="font-bold accent-text">Mastercard</span>
                         </div>
-                        <div class="glass px-4 py-2 rounded-lg">
-                            <span class="font-bold gradient-text">American Express</span>
+                        <div class="bg-gray-100 px-4 py-2 rounded-lg">
+                            <span class="font-bold accent-text">American Express</span>
                         </div>
-                        <div class="glass px-4 py-2 rounded-lg">
-                            <span class="font-bold gradient-text">bKash</span>
+                        <div class="bg-gray-100 px-4 py-2 rounded-lg">
+                            <span class="font-bold accent-text">bKash</span>
                         </div>
                     </div>
                 </div>
@@ -450,7 +477,7 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
             
             <!-- Copyright -->
             <div class="text-center text-gray-600 text-sm">
-                <p>© 2026 <span class="font-bold gradient-text"><?php echo htmlspecialchars($siteName); ?></span>. All rights reserved.</p>
+                <p>© 2026 <span class="font-bold accent-text"><?php echo htmlspecialchars($siteName); ?></span>. All rights reserved.</p>
                 <p class="mt-1">Developed with <i class="bi bi-heart-fill text-red-500"></i> by SmartB</p>
             </div>
         </div>

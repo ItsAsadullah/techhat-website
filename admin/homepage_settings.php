@@ -33,7 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
             'footer_email',
             'footer_address',
             'footer_hours',
-            'site_name'
+            'site_name',
+            'home_district',
+            'delivery_charge_inside',
+            'delivery_charge_outside'
         ];
         
         foreach($updateFields as $field) {
@@ -186,6 +189,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
                     </div>
                 </div>
 
+                <!-- Delivery Settings -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="bi bi-truck text-purple-600"></i> Delivery Settings
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Home District
+                            </label>
+                            <select name="home_district" id="home_district"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent">
+                                <option value="<?php echo htmlspecialchars($settings['home_district'] ?? ''); ?>" selected>
+                                    <?php echo htmlspecialchars($settings['home_district'] ?? 'Select District'); ?>
+                                </option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Base location for delivery calculation</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Inside Home District Charge (Tk)
+                            </label>
+                            <input type="number" 
+                                   name="delivery_charge_inside" 
+                                   value="<?php echo htmlspecialchars($settings['delivery_charge_inside'] ?? '70'); ?>"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Outside Home District Charge (Tk)
+                            </label>
+                            <input type="number" 
+                                   name="delivery_charge_outside" 
+                                   value="<?php echo htmlspecialchars($settings['delivery_charge_outside'] ?? '150'); ?>"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Footer Information -->
                 <div class="bg-white rounded-lg shadow-md p-6 mb-6">
                     <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -253,5 +298,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
         </div>
     </div>
 
+    <script src="../assets/js/bd-locations.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const districtSelect = document.getElementById('home_district');
+            const currentDistrict = "<?php echo htmlspecialchars($settings['home_district'] ?? ''); ?>";
+            
+            if (typeof bdLocations !== 'undefined') {
+                // Flatten districts from all divisions
+                let allDistricts = [];
+                const divisions = Object.keys(bdLocations);
+                divisions.forEach(div => {
+                    const districts = Object.keys(bdLocations[div]);
+                    allDistricts = [...allDistricts, ...districts];
+                });
+                allDistricts.sort();
+
+                // Clear and repopulate
+                districtSelect.innerHTML = '<option value="">Select District</option>';
+                allDistricts.forEach(dist => {
+                    const option = document.createElement('option');
+                    option.value = dist;
+                    option.textContent = dist;
+                    if (dist === currentDistrict) {
+                        option.selected = true;
+                    }
+                    districtSelect.appendChild(option);
+                });
+            }
+        });
+    </script>
 </body>
 </html>

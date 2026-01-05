@@ -92,7 +92,7 @@ function register(string $name, string $email, string $password, string $phone)
 function logout(): void
 {
     session_destroy();
-    header('Location: /techhat/login.php');
+    header('Location: /techhat/index.php');
     exit;
 }
 
@@ -109,7 +109,7 @@ function is_admin(): bool
 function require_login(): void
 {
     if (!is_logged_in()) {
-        header('Location: /techhat/login.php');
+        header('Location: /techhat/index.php');
         exit;
     }
 }
@@ -117,7 +117,7 @@ function require_login(): void
 function require_admin(): void
 {
     if (!is_admin()) {
-        header('Location: /techhat/login.php');
+        header('Location: /techhat/index.php');
         exit;
     }
 }
