@@ -162,11 +162,28 @@ foreach ($variants as $vv) {
     if ($v_data['sim_type']) $unique_sims[$v_data['sim_type']] = $v_data['sim_type'];
 }
 
-// Pricing Aggregates
+// Pricing Aggregates - Use first variant price to avoid flickering
 $effective_prices = array_column($variants_enhanced, 'effective_price');
 $min_price = $effective_prices ? min($effective_prices) : 0;
 $max_price = $effective_prices ? max($effective_prices) : 0;
-$price_range = ($min_price == $max_price) ? number_format($min_price) : number_format($min_price) . ' - ' . number_format($max_price);
+
+// Get first variant data for initial display (prevents price flickering)
+$first_variant = $variants_enhanced[0] ?? null;
+$display_price = $first_variant ? number_format($first_variant['effective_price']) : '0';
+$original_price = null;
+$discount_percent = 0;
+if ($first_variant) {
+    // Calculate discount from original price
+    if ($first_variant['offer_price'] && $first_variant['offer_price'] < $first_variant['price']) {
+        $original_price = $first_variant['price'];
+        $discount_percent = round((($original_price - $first_variant['offer_price']) / $original_price) * 100);
+    } elseif ($flash_discount_live && $flash_discount_live > 0) {
+        // Flash sale discount
+        $pre_flash_price = $first_variant['offer_price'] ?? $first_variant['price'];
+        $original_price = $pre_flash_price;
+        $discount_percent = $flash_discount_live;
+    }
+}
 
 // YouTube Video ID Extraction
 $videoId = null;
@@ -209,22 +226,6 @@ $warrantyPolicyText = $siteSettings['warranty_policy'] ?? '';
 $deliveryTimeInside = $siteSettings['delivery_time_inside'] ?? '2-3 business days';
 $deliveryTimeOutside = $siteSettings['delivery_time_outside'] ?? '3-5 business days';
 $freeDeliveryThreshold = $siteSettings['free_delivery_threshold'] ?? 5000;
-
-// Calculate Cart Total
-$cartTotal = 0;
-if (!empty($_SESSION['cart'])) {
-    $variantIds = array_keys($_SESSION['cart']);
-    $placeholders = implode(',', array_fill(0, count($variantIds), '?'));
-    $stmtCart = $pdo->prepare("SELECT id, price, offer_price FROM product_variants WHERE id IN ($placeholders)");
-    $stmtCart->execute($variantIds);
-    $cartVariants = $stmtCart->fetchAll(PDO::FETCH_ASSOC);
-    
-    foreach ($cartVariants as $cv) {
-        $price = $cv['offer_price'] > 0 ? $cv['offer_price'] : $cv['price'];
-        $qty = $_SESSION['cart'][$cv['id']];
-        $cartTotal += $price * $qty;
-    }
-}
 
 // Helper function to format policy text
 function formatPolicyText($text) {
@@ -309,13 +310,9 @@ require_once 'includes/header.php';
     .star-rating { display: flex; flex-direction: row-reverse; justify-content: flex-end; }
     
     /* Sticky Nav */
-    .sticky-nav {
-        position: sticky;
-        top: 0;
-        z-index: 40;
-        background: white;
-        border-bottom: 1px solid #e5e7eb;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    #product-nav {
+        top: var(--header-height, 70px);
+        transition: top 0.3s ease-in-out;
     }
     .nav-link {
         display: inline-block;
@@ -400,7 +397,7 @@ require_once 'includes/header.php';
                             <!-- Thumbnails -->
                             <div class="grid grid-cols-5 gap-2">
                                 <?php foreach ($images as $idx => $img): ?>
-                                <button onclick="showImage('<?php echo htmlspecialchars($img['image_path']); ?>', <?php echo $idx; ?>)" 
+                                <button onclick="showImage(<?php echo htmlspecialchars(json_encode($img['image_path'])); ?>, <?php echo $idx; ?>)" 
                                         class="h-20 w-full rounded-md overflow-hidden border-2 border-transparent hover:border-blue-500 focus:outline-none focus:border-blue-500 transition-colors bg-white thumbnail-btn flex items-center justify-center"
                                         data-index="<?php echo $idx; ?>">
                                     <img src="<?php echo htmlspecialchars($img['image_path']); ?>" class="max-w-full max-h-full object-contain p-1">
@@ -408,7 +405,7 @@ require_once 'includes/header.php';
                                 <?php endforeach; ?>
                                 
                                 <?php if ($videoId): ?>
-                                <button onclick="showVideo('<?php echo $videoId; ?>', <?php echo count($images); ?>)" 
+                                <button onclick="showVideo(<?php echo htmlspecialchars(json_encode($videoId)); ?>, <?php echo count($images); ?>)" 
                                         class="h-20 w-full rounded-md overflow-hidden border-2 border-transparent hover:border-blue-500 focus:outline-none focus:border-blue-500 transition-colors bg-gray-900 relative group thumbnail-btn flex items-center justify-center"
                                         data-index="<?php echo count($images); ?>">
                                     <img src="https://img.youtube.com/vi/<?php echo $videoId; ?>/0.jpg" class="w-full h-full object-cover opacity-75 group-hover:opacity-100 transition-opacity">
@@ -448,7 +445,11 @@ require_once 'includes/header.php';
                             <!-- Price -->
                             <div class="mb-6 bg-gray-50 p-4 rounded-lg">
                                 <div class="flex flex-wrap items-baseline gap-3">
-                                    <span class="text-3xl font-bold text-blue-600">৳<span id="display-price"><?php echo $price_range; ?></span></span>
+                                    <span class="text-3xl font-bold text-blue-600">৳<span id="display-price"><?php echo $display_price; ?></span></span>
+                                    <?php if ($original_price): ?>
+                                        <span class="text-xl text-gray-400 line-through ml-2" id="static-old-price">৳<?php echo number_format($original_price); ?></span>
+                                        <span class="ml-2 px-2 py-1 bg-red-500 text-white text-sm font-semibold rounded" id="static-discount">-<?php echo $discount_percent; ?>%</span>
+                                    <?php endif; ?>
                                     <div class="flex items-center gap-2">
                                         <span id="display-old-price" class="text-lg text-gray-500 line-through hidden"></span>
                                         <span id="display-discount" class="text-xs font-semibold text-white bg-red-500 rounded-full px-2 py-0.5 hidden"></span>
@@ -459,8 +460,8 @@ require_once 'includes/header.php';
                                         </span>
                                     <?php endif; ?>
                                 </div>
-                                <div id="you-save" class="mt-2 text-sm font-medium text-green-600 hidden">
-                                    <i class="bi bi-tag-fill"></i> You Save: ৳<span id="save-amount">0</span> (<span id="save-percent">0</span>%)
+                                <div id="you-save" class="mt-2 text-sm font-medium text-green-600 <?php echo $original_price ? '' : 'hidden'; ?>">
+                                    <i class="bi bi-tag-fill"></i> You Save: ৳<span id="save-amount"><?php echo $original_price ? number_format($original_price - $first_variant['effective_price']) : '0'; ?></span> (<span id="save-percent"><?php echo $discount_percent; ?></span>%)
                                 </div>
                                 <?php if ($flash_end_ts): ?>
                                     <div class="mt-2 inline-flex items-center gap-2 text-orange-700 text-sm font-medium">
@@ -565,8 +566,11 @@ require_once 'includes/header.php';
                                         <button type="submit" id="addToCartBtn" class="flex-1 bg-blue-600 text-white px-4 py-3 rounded-md font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
                                             <i class="bi bi-cart-plus" id="cartBtnIcon"></i> <span id="cartBtnText">Add to Cart</span>
                                         </button>
-                                        <button type="button" onclick="buyNow()" class="flex-1 bg-gray-900 text-white px-4 py-3 rounded-md font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
-                                            <i class="bi bi-bag-check"></i> Buy Now
+                                        <button type="button" onclick="toggleWishlist(<?php echo $product['id']; ?>)" id="wishlistBtn" class="bg-white border-2 border-gray-300 text-gray-700 px-4 py-3 rounded-md font-semibold hover:border-pink-500 hover:text-pink-500 transition-all hover:scale-110 flex items-center justify-center">
+                                            <i class="bi bi-heart text-xl animate-heartbeat" id="wishlistIcon"></i>
+                                        </button>
+                                        <button type="button" onclick="buyNow()" class="flex-1 bg-gray-900 text-white px-4 py-3 rounded-md font-semibold hover:bg-gray-800 transition-all hover:scale-105 hover:shadow-2xl flex items-center justify-center gap-2 animate-glow">
+                                            <i class="bi bi-bag-check animate-bounce-subtle"></i> Buy Now
                                         </button>
                                     </div>
                                 </div>
@@ -596,7 +600,7 @@ require_once 'includes/header.php';
                                         <a href="https://wa.me/?text=<?php echo urlencode($product['title'] . ' - ' . $canonical); ?>" target="_blank" class="w-9 h-9 rounded-full bg-green-600 hover:bg-green-700 flex items-center justify-center text-white transition-colors" title="Share on WhatsApp">
                                             <i class="bi bi-whatsapp"></i>
                                         </a>
-                                        <button onclick="copyLink()" class="w-9 h-9 rounded-full bg-gray-600 hover:bg-gray-700 flex items-center justify-center text-white transition-colors" title="Copy Link">
+                                        <button onclick="copyLink(event)" class="w-9 h-9 rounded-full bg-gray-600 hover:bg-gray-700 flex items-center justify-center text-white transition-colors" title="Copy Link">
                                             <i class="bi bi-link-45deg"></i>
                                         </button>
                                     </div>
@@ -1365,6 +1369,28 @@ require_once 'includes/header.php';
             else {
                  const firstSize = document.querySelector('.variant-btn[data-type="size"]');
                  if(firstSize) selectVariantOption('size', firstSize.dataset.value, firstSize);
+                 else {
+                     // No variant options - product has only one default variant
+                     // Automatically select the first (and only) variant
+                     if (allVariants && allVariants.length > 0) {
+                         const defaultVariant = allVariants[0];
+                         document.getElementById('variant_id').value = defaultVariant.id;
+                         
+                         // Update price display
+                         const priceValue = defaultVariant.effective_price ?? defaultVariant.offer_price ?? defaultVariant.price ?? 0;
+                         const displayPriceEl = document.getElementById('display-price');
+                         if (displayPriceEl) {
+                             displayPriceEl.innerText = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(priceValue);
+                         }
+                         
+                         // Update stock
+                         const stockEl = document.getElementById('items-available');
+                         const currentStock = defaultVariant.stock || 0;
+                         if (stockEl) {
+                             stockEl.textContent = `${currentStock} items available`;
+                         }
+                     }
+                 }
             }
         }
     }
@@ -1604,6 +1630,65 @@ require_once 'includes/header.php';
         });
 
         initVariants();
+        
+        // Color hover to preview image
+        const colorBtns = document.querySelectorAll('.color-btn');
+        const mainImage = document.getElementById('main-image');
+        let currentMainImage = mainImage ? mainImage.src : '';
+        
+        colorBtns.forEach(btn => {
+            // Store original image on page load
+            if (!currentMainImage && mainImage) {
+                currentMainImage = mainImage.src;
+            }
+            
+            // Hover to preview variant image
+            btn.addEventListener('mouseenter', function() {
+                const variantImage = this.dataset.image;
+                if (variantImage && mainImage && variantImage.trim() !== '') {
+                    mainImage.src = variantImage;
+                }
+            });
+            
+            // Restore on mouse leave if not selected
+            btn.addEventListener('mouseleave', function() {
+                if (!this.classList.contains('selected') && mainImage) {
+                    // Find currently selected color button
+                    const selectedColorBtn = document.querySelector('.color-btn.selected');
+                    if (selectedColorBtn && selectedColorBtn.dataset.image) {
+                        mainImage.src = selectedColorBtn.dataset.image;
+                    } else if (currentMainImage) {
+                        mainImage.src = currentMainImage;
+                    }
+                }
+            });
+        });
+        
+        // Auto-select first available variant IMMEDIATELY (before DOM fully renders)
+        if (colorBtns.length > 0) {
+            colorBtns[0].click();
+            
+            // Chain select size/storage immediately
+            setTimeout(() => {
+                const sizeBtns = document.querySelectorAll('[data-type="size"]:not([disabled])');
+                if (sizeBtns.length > 0) sizeBtns[0].click();
+                
+                const storageBtns = document.querySelectorAll('[data-type="storage"]:not([disabled])');
+                if (storageBtns.length > 0) storageBtns[0].click();
+            }, 50);
+        } else {
+            const sizeBtns = document.querySelectorAll('[data-type="size"]:not([disabled])');
+            if (sizeBtns.length > 0) {
+                sizeBtns[0].click();
+                setTimeout(() => {
+                    const storageBtns = document.querySelectorAll('[data-type="storage"]:not([disabled])');
+                    if (storageBtns.length > 0) storageBtns[0].click();
+                }, 50);
+            } else {
+                const storageBtns = document.querySelectorAll('[data-type="storage"]:not([disabled])');
+                if (storageBtns.length > 0) storageBtns[0].click();
+            }
+        }
     });
 
     // Quantity
@@ -1628,7 +1713,7 @@ require_once 'includes/header.php';
     }
 
     // Copy Link Function
-    function copyLink() {
+    function copyLink(event) {
         const url = window.location.href;
         navigator.clipboard.writeText(url).then(() => {
             // Show success message
@@ -1676,13 +1761,7 @@ require_once 'includes/header.php';
 
     // Sticky Nav Active State & Positioning
     function updateStickyNav() {
-        const header = document.getElementById('mainHeader');
-        const productNav = document.getElementById('product-nav');
-        
-        if (header && productNav) {
-            const headerRect = header.getBoundingClientRect();
-            productNav.style.top = headerRect.height + 'px';
-        }
+        // Handled by CSS variable --header-height
     }
 
     // Initial call and resize listener
@@ -1751,44 +1830,6 @@ require_once 'includes/header.php';
         }
     }
 
-    function updateCartCount(count) {
-        const badge = document.querySelector('.cart-count-badge');
-        const floatingBadge = document.querySelector('.floating-cart-badge');
-        const floatingBtn = document.getElementById('floatingCartBtn');
-        
-        if (badge) {
-            badge.textContent = count > 99 ? '99+' : count;
-            badge.classList.toggle('hidden', count === 0);
-        }
-        if (floatingBadge) {
-            floatingBadge.textContent = count;
-            floatingBadge.classList.toggle('hidden', count === 0);
-        }
-        
-        // Update floating button visibility and item text
-        if (floatingBtn) {
-            if (count > 0) {
-                floatingBtn.classList.remove('hidden');
-                const itemText = floatingBtn.querySelector('.text-xs');
-                if (itemText) {
-                    itemText.textContent = `${count} item${count > 1 ? 's' : ''}`;
-                }
-            } else {
-                floatingBtn.classList.add('hidden');
-            }
-        }
-    }
-    
-    function updateCartTotal(total) {
-        const floatingBtn = document.getElementById('floatingCartBtn');
-        if (floatingBtn) {
-            const totalText = floatingBtn.querySelector('.text-sm.font-bold');
-            if (totalText) {
-                totalText.textContent = '৳' + total.toLocaleString('en-BD');
-            }
-        }
-    }
-
     function handleCartSubmit(event) {
         event.preventDefault();
         
@@ -1817,6 +1858,15 @@ require_once 'includes/header.php';
                 updateCartTotal(data.total || 0);
                 showCartNotification(data.message);
                 
+                // Dispatch custom event
+                window.dispatchEvent(new CustomEvent('cartUpdated', {
+                    detail: {
+                        variantId: parseInt(variantId),
+                        action: isInCart ? 'remove' : 'add',
+                        inCart: data.inCart
+                    }
+                }));
+                
                 // Refresh cart sidebar if open
                 if (!document.getElementById('cartSidebar').classList.contains('translate-x-full')) {
                     loadCartSidebar();
@@ -1833,157 +1883,140 @@ require_once 'includes/header.php';
         return false;
     }
 
-    function showCartNotification(message) {
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
-        notification.innerHTML = `<i class="bi bi-check-circle-fill mr-2"></i>${message}`;
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.classList.add('animate-fade-out');
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
-    }
-
-    // Open/Close Cart Sidebar
-    function toggleCartSidebar() {
-        const sidebar = document.getElementById('cartSidebar');
-        const overlay = document.getElementById('cartOverlay');
-        
-        if (sidebar.classList.contains('translate-x-full')) {
-            sidebar.classList.remove('translate-x-full');
-            overlay.classList.remove('hidden');
-            loadCartSidebar();
-        } else {
-            sidebar.classList.add('translate-x-full');
-            overlay.classList.add('hidden');
-        }
-    }
-
-    function loadCartSidebar() {
-        const cartContent = document.getElementById('cartSidebarContent');
-        cartContent.innerHTML = '<div class="text-center py-8"><i class="bi bi-hourglass-split text-2xl text-gray-400 animate-spin"></i></div>';
-        
-        fetch('api/cart_ajax.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: 'action=get_cart'
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                updateCartCount(data.count);
-                updateCartTotal(data.total || 0);
-                renderCartSidebar(data);
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    }
-
-    function renderCartSidebar(data) {
-        const content = document.getElementById('cartSidebarContent');
-        
-        if (data.items.length === 0) {
-            content.innerHTML = `
-                <div class="text-center py-12">
-                    <i class="bi bi-cart-x text-6xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">Your cart is empty</p>
-                </div>
-            `;
-            return;
-        }
-        
-        let html = '<div class="space-y-4">';
-        data.items.forEach(item => {
-            const variantInfo = [item.color, item.storage, item.size].filter(Boolean).join(', ');
-            html += `
-                <div class="flex gap-3 border-b border-gray-200 pb-4">
-                    <img src="${item.image}" alt="${item.title}" class="w-20 h-20 object-contain rounded border">
-                    <div class="flex-1 min-w-0">
-                        <h4 class="text-sm font-semibold text-gray-900 truncate">${item.title}</h4>
-                        <p class="text-xs text-gray-500">${variantInfo}</p>
-                        <div class="flex items-center justify-between mt-2">
-                            <span class="text-sm font-bold text-blue-600">৳${item.price.toLocaleString()}</span>
-                            <span class="text-xs text-gray-500">Qty: ${item.quantity}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        html += '</div>';
-        html += `
-            <div class="mt-6 pt-4 border-t-2 border-gray-300">
-                <div class="flex justify-between items-center mb-4">
-                    <span class="text-lg font-bold text-gray-900">Total:</span>
-                    <span class="text-2xl font-bold text-blue-600">৳${data.total.toLocaleString()}</span>
-                </div>
-                <a href="checkout.php" class="block w-full bg-blue-600 text-white text-center py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
-                    <i class="bi bi-bag-check mr-2"></i>Proceed to Checkout
-                </a>
-                <a href="cart.php" class="block w-full mt-2 bg-gray-200 text-gray-700 text-center py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors text-sm">
-                    View Full Cart
-                </a>
-            </div>
-        `;
-        
-        content.innerHTML = html;
-    }
-
     // Check current variant on page load
     window.addEventListener('DOMContentLoaded', function() {
         const variantId = document.getElementById('variant_id').value;
         if (variantId && currentVariantId.includes(parseInt(variantId))) {
             updateCartButton(true);
         }
+        
+        // Check wishlist status
+        checkWishlistStatus();
     });
+    
+    // Listen for cart updates from cart widget
+    window.addEventListener('cartUpdated', function(e) {
+        const currentVariant = parseInt(document.getElementById('variant_id').value);
+        const updatedVariant = parseInt(e.detail.variantId);
+        
+        // If the updated variant matches current product variant, update button
+        if (currentVariant === updatedVariant) {
+            updateCartButton(e.detail.inCart);
+        }
+    });
+
+    // Wishlist Functions
+    function checkWishlistStatus() {
+        <?php if (is_logged_in()): ?>
+        fetch('api/wishlist_ajax.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'action=check&product_id=<?php echo $product['id']; ?>'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.inWishlist) {
+                updateWishlistButton(true);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+        <?php endif; ?>
+    }
+
+    function toggleWishlist(productId) {
+        <?php if (!is_logged_in()): ?>
+        openAuthModal('loginModal');
+        return;
+        <?php endif; ?>
+
+        const isInWishlist = document.getElementById('wishlistIcon').classList.contains('bi-heart-fill');
+        const action = isInWishlist ? 'remove' : 'add';
+
+        fetch('api/wishlist_ajax.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `action=${action}&product_id=${productId}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.requireLogin) {
+                openAuthModal('loginModal');
+                return;
+            }
+            if (data.success) {
+                updateWishlistButton(data.inWishlist);
+                showCartNotification(data.message);
+                updateWishlistCount(data.wishlistCount);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function updateWishlistButton(inWishlist) {
+        const btn = document.getElementById('wishlistBtn');
+        const icon = document.getElementById('wishlistIcon');
+        
+        if (inWishlist) {
+            btn.classList.remove('border-gray-300', 'text-gray-700');
+            btn.classList.add('border-pink-500', 'text-pink-500', 'bg-pink-50');
+            icon.classList.remove('bi-heart');
+            icon.classList.add('bi-heart-fill');
+        } else {
+            btn.classList.remove('border-pink-500', 'text-pink-500', 'bg-pink-50');
+            btn.classList.add('border-gray-300', 'text-gray-700');
+            icon.classList.remove('bi-heart-fill');
+            icon.classList.add('bi-heart');
+        }
+    }
+
+    function updateWishlistCount(count) {
+        const wishlistBadges = document.querySelectorAll('.wishlist-count-badge');
+        wishlistBadges.forEach(badge => {
+            badge.textContent = count;
+            badge.classList.toggle('hidden', count === 0);
+        });
+    }
 </script>
 
-<!-- Floating Cart Button -->
-<button onclick="toggleCartSidebar()" id="floatingCartBtn" class="fixed right-4 bottom-20 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-2xl z-[9999] transition-all hover:scale-105 overflow-hidden <?php echo $cartCount > 0 ? '' : 'hidden'; ?>">
-    <div class="flex items-center gap-3 px-4 py-3">
-        <div class="relative">
-            <i class="bi bi-cart3 text-2xl"></i>
-            <span class="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center"><?php echo $cartCount; ?></span>
-        </div>
-        <div class="text-left">
-            <div class="text-xs opacity-90"><?php echo $cartCount; ?> item<?php echo $cartCount > 1 ? 's' : ''; ?></div>
-            <div class="text-sm font-bold">৳<?php echo number_format($cartTotal); ?></div>
-        </div>
-    </div>
-</button>
-
-<!-- Cart Sidebar -->
-<div id="cartOverlay" class="fixed inset-0 bg-black/50 z-[9998] hidden" onclick="toggleCartSidebar()"></div>
-<div id="cartSidebar" class="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-[9999] transform translate-x-full transition-transform duration-300">
-    <div class="flex flex-col h-full">
-        <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-            <h3 class="text-lg font-bold text-gray-900"><i class="bi bi-cart3 mr-2"></i>Shopping Cart</h3>
-            <button onclick="toggleCartSidebar()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                <i class="bi bi-x-lg text-2xl"></i>
-            </button>
-        </div>
-        <div id="cartSidebarContent" class="flex-1 overflow-y-auto p-4">
-            <!-- Cart items will be loaded here -->
-        </div>
-    </div>
-</div>
-
 <style>
-.animate-fade-in {
-    animation: fadeIn 0.3s ease-in;
+.animate-heartbeat {
+    animation: heartbeat 1.5s ease-in-out infinite;
 }
-.animate-fade-out {
-    animation: fadeOut 0.3s ease-out;
+.animate-glow {
+    animation: glow 2s ease-in-out infinite;
 }
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+.animate-bounce-subtle {
+    animation: bounceSubtle 2s infinite;
 }
-@keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
+@keyframes heartbeat {
+    0%, 100% {
+        transform: scale(1);
+    }
+    10%, 30% {
+        transform: scale(1.15);
+    }
+    20%, 40% {
+        transform: scale(1);
+    }
+}
+@keyframes glow {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(31, 41, 55, 0.5), 0 0 10px rgba(31, 41, 55, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(31, 41, 55, 0.8), 0 0 30px rgba(31, 41, 55, 0.4);
+    }
+}
+@keyframes bounceSubtle {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-3px);
+    }
 }
 </style>
+
 
 </body>
 </html>

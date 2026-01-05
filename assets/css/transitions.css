@@ -1,0 +1,87 @@
+/* Smooth Page Transitions */
+body {
+    scroll-behavior: smooth;
+}
+
+/* Page Transition Effects */
+.page-transition {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.page-transition.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Loading State */
+.page-loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    z-index: 99999;
+    animation: loadingBar 1s ease-in-out infinite;
+}
+
+@keyframes loadingBar {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* Smooth Button Interactions */
+.btn-smooth {
+    transition: all 0.2s ease;
+}
+
+.btn-smooth:active {
+    transform: scale(0.98);
+}
+
+/* Card Hover Effects */
+.card-smooth {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-smooth:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Link Smooth Transitions */
+a {
+    transition: color 0.2s ease;
+}
+
+/* Form Input Smooth Focus */
+input, textarea, select {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Fade In Animation */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.4s ease forwards;
+}
+
+/* Smooth Modal Transitions */
+.modal-transition {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}

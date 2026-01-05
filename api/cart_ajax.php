@@ -16,7 +16,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $qty = max(1, (int) ($_POST['qty'] ?? 1));
         
         if ($variant_id > 0) {
-            $_SESSION['cart'][$variant_id] = ($_SESSION['cart'][$variant_id] ?? 0) + $qty;
+            // Check stock availability
+            $stmt = $pdo->prepare("SELECT stock_quantity FROM product_variants WHERE id = ?");
+            $stmt->execute([$variant_id]);
+            $variant = $stmt->fetch();
+            
+            $newQty = ($_SESSION['cart'][$variant_id] ?? 0) + $qty;
+            
+            if ($variant && $newQty > $variant['stock_quantity']) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Only ' . $variant['stock_quantity'] . ' items available in stock',
+                    'maxStock' => $variant['stock_quantity']
+                ]);
+                exit;
+            }
+            
+            $_SESSION['cart'][$variant_id] = $newQty;
             
             // Get cart count
             $cartCount = array_sum($_SESSION['cart']);
@@ -46,6 +62,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode([
                 'success' => false,
                 'message' => 'Invalid product variant'
+            ]);
+        }
+        exit;
+    }
+    
+    if ($action === 'update_qty') {
+        $variant_id = (int) ($_POST['variant_id'] ?? 0);
+        $qty = max(1, (int) ($_POST['qty'] ?? 1));
+        
+        if (isset($_SESSION['cart'][$variant_id])) {
+            // Check stock availability
+            $stmt = $pdo->prepare("SELECT stock_quantity FROM product_variants WHERE id = ?");
+            $stmt->execute([$variant_id]);
+            $variant = $stmt->fetch();
+            
+            if ($variant && $qty > $variant['stock_quantity']) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Only ' . $variant['stock_quantity'] . ' items available in stock',
+                    'maxStock' => $variant['stock_quantity']
+                ]);
+                exit;
+            }
+            
+            $_SESSION['cart'][$variant_id] = $qty;
+            
+            $cartCount = array_sum($_SESSION['cart']);
+            
+            // Calculate new total
+            $total = 0;
+            if (!empty($_SESSION['cart'])) {
+                $variantIds = array_keys($_SESSION['cart']);
+                $placeholders = implode(',', array_fill(0, count($variantIds), '?'));
+                $stmt = $pdo->prepare("SELECT id, price, offer_price FROM product_variants WHERE id IN ($placeholders)");
+                $stmt->execute($variantIds);
+                $variants = $stmt->fetchAll();
+                foreach ($variants as $v) {
+                    $price = $v['offer_price'] > 0 ? $v['offer_price'] : $v['price'];
+                    $total += $price * $_SESSION['cart'][$v['id']];
+                }
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Cart updated',
+                'cartCount' => $cartCount,
+                'total' => $total,
+                'inCart' => true
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Product not in cart'
             ]);
         }
         exit;

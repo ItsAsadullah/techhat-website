@@ -267,37 +267,37 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
                 $maxEffective = (float) $p['max_effective'];
                 $savePercent = ($p['min_regular'] && $p['min_regular'] > $minEffective) ? round((($p['min_regular'] - $minEffective) / $p['min_regular']) * 100) : 0;
                 ?>
-                <a href="product.php?slug=<?php echo $p['slug']; ?>" 
-                   class="product-card rounded-lg overflow-hidden">
-                    <!-- Product Image -->
-                    <div class="relative bg-gray-50 p-3 h-40 flex items-center justify-center">
-                        <?php if($savePercent > 0): ?>
-                        <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10">
-                            -<?php echo $savePercent; ?>%
-                        </span>
-                        <?php endif; ?>
-                        
-                        <?php if($p['thumb']): ?>
-                            <img src="<?php echo $p['thumb']; ?>" 
-                                 alt="<?php echo htmlspecialchars($p['title']); ?>"
-                                 class="max-w-full max-h-full object-contain">
-                        <?php else: ?>
-                            <i class="bi bi-image text-5xl text-gray-300"></i>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <!-- Product Info -->
-                    <div class="p-3">
-                        <h3 class="font-semibold text-gray-800 text-xs mb-2 h-8 overflow-hidden" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
-                            <?php echo htmlspecialchars($p['title']); ?>
-                        </h3>
-                        
-                        <div class="flex items-center gap-1 mb-2">
-                            <span class="text-lg font-bold accent-text">
-                                ৳<?php echo number_format($minEffective); ?>
+                <div class="product-card rounded-lg overflow-hidden relative group">
+                    <a href="product.php?slug=<?php echo $p['slug']; ?>">
+                        <!-- Product Image -->
+                        <div class="relative bg-gray-50 p-3 h-40 flex items-center justify-center">
+                            <?php if($savePercent > 0): ?>
+                            <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10">
+                                -<?php echo $savePercent; ?>%
                             </span>
-                            <?php if($p['min_regular'] && $p['min_regular'] > $minEffective): ?>
-                            <span class="text-xs text-gray-400 line-through">
+                            <?php endif; ?>
+                            
+                            <?php if($p['thumb']): ?>
+                                <img src="<?php echo $p['thumb']; ?>" 
+                                     alt="<?php echo htmlspecialchars($p['title']); ?>"
+                                     class="max-w-full max-h-full object-contain">
+                            <?php else: ?>
+                                <i class="bi bi-image text-5xl text-gray-300"></i>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <!-- Product Info -->
+                        <div class="p-3">
+                            <h3 class="font-semibold text-gray-800 text-xs mb-2 h-8 overflow-hidden" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                                <?php echo htmlspecialchars($p['title']); ?>
+                            </h3>
+                            
+                            <div class="flex items-center gap-1 mb-2">
+                                <span class="text-lg font-bold accent-text">
+                                    ৳<?php echo number_format($minEffective); ?>
+                                </span>
+                                <?php if($p['min_regular'] && $p['min_regular'] > $minEffective): ?>
+                                <span class="text-xs text-gray-400 line-through">
                                 ৳<?php echo number_format($p['min_regular']); ?>
                             </span>
                             <?php endif; ?>
@@ -307,7 +307,15 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
                             <i class="bi bi-cart-plus"></i> Add
                         </button>
                     </div>
-                </a>
+                    </a>
+                    
+                    <!-- Wishlist Button -->
+                    <button onclick="toggleProductWishlist(event, <?php echo $p['id']; ?>, this)" 
+                            class="wishlist-btn absolute top-2 right-2 bg-white hover:bg-pink-50 text-gray-400 hover:text-pink-500 w-8 h-8 rounded-full flex items-center justify-center shadow-md transition-all hover:scale-110 z-20"
+                            data-product-id="<?php echo $p['id']; ?>">
+                        <i class="bi bi-heart text-lg wishlist-icon-animate"></i>
+                    </button>
+                </div>
                 <?php endforeach; ?>
             </div>
         </div>
@@ -509,6 +517,83 @@ $seoFeatures = isset($settings['seo_features']) ? explode('|', $settings['seo_fe
                 changeSlide(1);
             }, 5000);
         }
+        
+        // Wishlist functionality for product cards
+        function toggleProductWishlist(event, productId, button) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            <?php if (!is_logged_in()): ?>
+            openAuthModal('loginModal');
+            return;
+            <?php endif; ?>
+
+            const icon = button.querySelector('i');
+            const isInWishlist = icon.classList.contains('bi-heart-fill');
+            const action = isInWishlist ? 'remove' : 'add';
+
+            fetch('api/wishlist_ajax.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `action=${action}&product_id=${productId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.requireLogin) {
+                    openAuthModal('loginModal');
+                    return;
+                }
+                if (data.success) {
+                    if (data.inWishlist) {
+                        button.classList.remove('text-gray-400');
+                        button.classList.add('text-pink-500', 'bg-pink-50');
+                        icon.classList.remove('bi-heart');
+                        icon.classList.add('bi-heart-fill');
+                    } else {
+                        button.classList.remove('text-pink-500', 'bg-pink-50');
+                        button.classList.add('text-gray-400');
+                        icon.classList.remove('bi-heart-fill');
+                        icon.classList.add('bi-heart');
+                    }
+                    updateWishlistCount(data.wishlistCount);
+                    showCartNotification(data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function updateWishlistCount(count) {
+            const wishlistBadges = document.querySelectorAll('.wishlist-count-badge');
+            wishlistBadges.forEach(badge => {
+                badge.textContent = count;
+                badge.classList.toggle('hidden', count === 0);
+            });
+        }
+        
+        // Check wishlist status for all products on page load
+        <?php if (is_logged_in()): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.wishlist-btn').forEach(btn => {
+                const productId = btn.dataset.productId;
+                fetch('api/wishlist_ajax.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: `action=check&product_id=${productId}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.inWishlist) {
+                        const icon = btn.querySelector('i');
+                        btn.classList.remove('text-gray-400');
+                        btn.classList.add('text-pink-500', 'bg-pink-50');
+                        icon.classList.remove('bi-heart');
+                        icon.classList.add('bi-heart-fill');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        });
+        <?php endif; ?>
     </script>
 
 </body>

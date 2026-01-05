@@ -40,7 +40,8 @@ if ($action === 'login') {
         } elseif (is_admin()) {
             $response['redirect'] = 'admin/index.php';
         } else {
-            $response['redirect'] = 'dashboard.php';
+            // Stay on current page (sent from frontend)
+            $response['redirect'] = $_POST['current_page'] ?? 'index.php';
         }
     } else {
         $response['message'] = 'Invalid email or password';
@@ -81,7 +82,8 @@ elseif ($action === 'register') {
             unset($_SESSION['checkout_redirect']);
             $response['redirect'] = 'checkout.php';
         } else {
-            $response['redirect'] = 'index.php';
+            // Stay on current page (sent from frontend)
+            $response['redirect'] = $_POST['current_page'] ?? 'index.php';
         }
     } else {
         $response['message'] = $result;

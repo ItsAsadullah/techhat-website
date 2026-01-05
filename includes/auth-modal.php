@@ -379,6 +379,7 @@ document.getElementById('loginFormSubmit')?.addEventListener('submit', async fun
     
     const formData = new FormData(this);
     formData.append('action', 'login');
+    formData.append('current_page', window.location.pathname + window.location.search);
     
     try {
         const response = await fetch('core/auth_handler.php', {
@@ -389,7 +390,7 @@ document.getElementById('loginFormSubmit')?.addEventListener('submit', async fun
         const result = await response.json();
         
         if (result.success) {
-            window.location.href = result.redirect || 'dashboard.php';
+            window.location.href = result.redirect;
         } else {
             document.getElementById('loginError').classList.remove('hidden');
             document.getElementById('loginErrorText').textContent = result.message || 'Login failed';
@@ -406,6 +407,7 @@ document.getElementById('registerFormSubmit')?.addEventListener('submit', async 
     
     const formData = new FormData(this);
     formData.append('action', 'register');
+    formData.append('current_page', window.location.pathname + window.location.search);
     
     try {
         const response = await fetch('core/auth_handler.php', {
@@ -423,7 +425,7 @@ document.getElementById('registerFormSubmit')?.addEventListener('submit', async 
             
             // Auto-login successful - redirect immediately
             setTimeout(() => {
-                window.location.href = result.redirect || 'index.php';
+                window.location.href = result.redirect;
             }, 800);
         } else {
             document.getElementById('registerError').classList.remove('hidden');

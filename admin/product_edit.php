@@ -56,10 +56,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $warranty_type = trim($_POST['warranty_type']);
             $warranty_period = trim($_POST['warranty_period']);
             $category_id = !empty($_POST['sub_category_id']) ? $_POST['sub_category_id'] : $_POST['category_id'];
+            $brand_id = !empty($_POST['brand_id']) ? $_POST['brand_id'] : null;
             $is_flash_sale = isset($_POST['is_flash_sale']) ? 1 : 0;
 
-            $stmt = $pdo->prepare("UPDATE products SET title = ?, category_id = ?, description = ?, specifications = ?, video_url = ?, badge_text = ?, warranty_type = ?, warranty_period = ?, is_flash_sale = ? WHERE id = ?");
-            $stmt->execute([$title, $category_id, $description, $specifications, $video_url, $badge_text, $warranty_type, $warranty_period, $is_flash_sale, $id]);
+            $stmt = $pdo->prepare("UPDATE products SET title = ?, category_id = ?, brand_id = ?, description = ?, specifications = ?, video_url = ?, badge_text = ?, warranty_type = ?, warranty_period = ?, is_flash_sale = ? WHERE id = ?");
+            $stmt->execute([$title, $category_id, $brand_id, $description, $specifications, $video_url, $badge_text, $warranty_type, $warranty_period, $is_flash_sale, $id]);
 
             // 2. Update Flash Sale
             // First, deactivate existing for this product (simplification)
@@ -315,8 +316,40 @@ require_once __DIR__ . '/partials/sidebar.php';
 
                     <!-- Specifications -->
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <h2 class="text-lg font-semibold mb-4">Specifications</h2>
-                        <textarea name="specifications" rows="4" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"><?php echo htmlspecialchars($product['specifications']); ?></textarea>
+                        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <i class="bi bi-list-ul text-blue-600"></i>
+                            Product Specifications
+                        </h2>
+                        <p class="text-xs text-gray-500 mb-4">Add key specifications. Format: Key: Value (one per line)</p>
+                        
+                        <!-- Specification Templates by Category -->
+                        <div class="mb-4">
+                            <button type="button" onclick="loadSpecTemplate('laptop')" class="text-xs bg-gray-100 hover:bg-blue-50 px-3 py-1.5 rounded mr-2 mb-2">
+                                📱 Laptop Template
+                            </button>
+                            <button type="button" onclick="loadSpecTemplate('phone')" class="text-xs bg-gray-100 hover:bg-blue-50 px-3 py-1.5 rounded mr-2 mb-2">
+                                📱 Phone Template
+                            </button>
+                            <button type="button" onclick="loadSpecTemplate('monitor')" class="text-xs bg-gray-100 hover:bg-blue-50 px-3 py-1.5 rounded mr-2 mb-2">
+                                🖥️ Monitor Template
+                            </button>
+                            <button type="button" onclick="loadSpecTemplate('watch')" class="text-xs bg-gray-100 hover:bg-blue-50 px-3 py-1.5 rounded mr-2 mb-2">
+                                ⌚ Watch Template
+                            </button>
+                        </div>
+                        
+                        <textarea name="specifications" id="specificationsField" rows="12" 
+                                  class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
+                                  placeholder="Example:&#10;Processor: Intel Core i5-12th Gen&#10;RAM: 8GB DDR4&#10;Storage: 512GB SSD&#10;Display: 15.6&quot; FHD&#10;Graphics: Intel UHD&#10;Battery: 3-cell 42Wh&#10;OS: Windows 11&#10;Warranty: 2 Years"><?php echo htmlspecialchars($product['specifications']); ?></textarea>
+                        
+                        <div class="mt-3 text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <strong class="text-blue-800">💡 Tips:</strong>
+                            <ul class="list-disc list-inside mt-1 space-y-1">
+                                <li>Enter one specification per line</li>
+                                <li>Format: <code class="bg-white px-1 rounded">Spec Name: Spec Value</code></li>
+                                <li>Common specs will show on product cards</li>
+                            </ul>
+                        </div>
                     </div>
 
                 </div>
@@ -347,6 +380,21 @@ require_once __DIR__ . '/partials/sidebar.php';
                                 </select>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Brand -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h2 class="text-lg font-semibold mb-4">Brand</h2>
+                        <select name="brand_id" class="w-full px-3 py-2 border rounded-lg outline-none">
+                            <option value="">Select Brand</option>
+                            <?php
+                            $stmtBrands = $pdo->query("SELECT id, name FROM brands ORDER BY name ASC");
+                            while($b = $stmtBrands->fetch()) {
+                                $selected = ($product['brand_id'] == $b['id']) ? 'selected' : '';
+                                echo "<option value='{$b['id']}' $selected>".htmlspecialchars($b['name'])."</option>";
+                            }
+                            ?>
+                        </select>
                     </div>
 
                     <!-- Gallery -->
@@ -562,6 +610,59 @@ require_once __DIR__ . '/partials/sidebar.php';
         const checked = document.getElementById('is_flash_sale').checked;
         const options = document.getElementById('flash-sale-options');
         if (checked) options.classList.remove('hidden'); else options.classList.add('hidden');
+    }
+
+    // --- Specification Templates ---
+    function loadSpecTemplate(type) {
+        const specField = document.getElementById('specificationsField');
+        const templates = {
+            laptop: `Processor: Intel Core i5-12th Gen
+RAM: 8GB DDR4
+Storage: 512GB SSD
+Display: 15.6" FHD (1920x1080)
+Graphics: Intel UHD Graphics
+Battery: 3-cell 42Wh
+OS: Windows 11 Home
+Connectivity: Wi-Fi 6, Bluetooth 5.1
+Ports: 2x USB 3.2, 1x USB-C, HDMI, Audio Jack
+Weight: 1.7kg
+Warranty: 2 Years International`,
+            phone: `Processor: Snapdragon 888
+RAM: 8GB
+Storage: 128GB
+Display: 6.5" AMOLED FHD+
+Camera: 64MP + 8MP + 2MP
+Front Camera: 32MP
+Battery: 4500mAh Fast Charging
+OS: Android 13
+Network: 5G
+SIM: Dual SIM
+Warranty: 1 Year Official`,
+            monitor: `Display: 27" IPS Full HD
+Resolution: 1920x1080
+Refresh Rate: 75Hz
+Response Time: 5ms
+Brightness: 250 cd/m²
+Contrast Ratio: 1000:1
+Viewing Angle: 178°/178°
+Connectivity: HDMI, VGA, DisplayPort
+VESA Mount: 100x100mm
+Warranty: 3 Years`,
+            watch: `Display: 1.4" AMOLED
+Resolution: 454x454
+Battery: 300mAh (7 days)
+Water Resistance: 5ATM
+Connectivity: Bluetooth 5.0
+Sensors: Heart Rate, SpO2, Accelerometer
+GPS: Built-in
+Compatibility: Android & iOS
+Strap: Silicone
+Warranty: 1 Year`
+        };
+        
+        if (templates[type]) {
+            specField.value = templates[type];
+        }
     }
 </script>
 </body>

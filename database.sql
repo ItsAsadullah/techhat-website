@@ -32,10 +32,21 @@ CREATE TABLE IF NOT EXISTS categories (
     INDEX idx_categories_parent (parent_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Brands
+CREATE TABLE IF NOT EXISTS brands (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    slug VARCHAR(120) NOT NULL UNIQUE,
+    image VARCHAR(255) NULL,
+    is_featured TINYINT(1) DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Products
 CREATE TABLE IF NOT EXISTS products (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     category_id INT UNSIGNED NULL,
+    brand_id INT UNSIGNED NULL,
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL UNIQUE,
     description LONGTEXT,
@@ -45,7 +56,9 @@ CREATE TABLE IF NOT EXISTS products (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+    CONSTRAINT fk_products_brand FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE SET NULL,
     INDEX idx_products_category (category_id),
+    INDEX idx_products_brand (brand_id),
     INDEX idx_products_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -241,6 +254,55 @@ CREATE TABLE IF NOT EXISTS banners (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Homepage Settings (Required for Header & Footer info)
+CREATE TABLE IF NOT EXISTS homepage_settings (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    setting_key VARCHAR(50) NOT NULL UNIQUE,
+    setting_value TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Wishlist (Required for Header Wishlist Counter)
+CREATE TABLE IF NOT EXISTS wishlist (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    product_id INT UNSIGNED NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_wishlist_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_wishlist_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_product (user_id, product_id),
+    INDEX idx_wishlist_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Product Reviews (Optional - Good for future use)
+CREATE TABLE IF NOT EXISTS product_reviews (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id INT UNSIGNED NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    rating TINYINT UNSIGNED NOT NULL COMMENT '1 to 5 stars',
+    review TEXT,
+    is_approved TINYINT(1) DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_reviews_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    CONSTRAINT fk_reviews_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_reviews_product (product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Coupons (Optional - Good for e-commerce)
+CREATE TABLE IF NOT EXISTS coupons (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    discount_type ENUM('fixed', 'percent') NOT NULL,
+    discount_amount DECIMAL(12,2) NOT NULL,
+    min_spend DECIMAL(12,2) DEFAULT 0,
+    max_usage INT DEFAULT NULL,
+    usage_count INT DEFAULT 0,
+    expires_at DATETIME NULL,
+    is_active TINYINT(1) DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Seed: admin user (password: password)
 INSERT IGNORE INTO users (id, name, email, password, role, status) VALUES
 (1, 'Admin', 'admin@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 1);
@@ -250,3 +312,14 @@ INSERT IGNORE INTO categories (id, parent_id, name, slug) VALUES
 (1, NULL, 'Electronics', 'electronics'),
 (2, 1, 'Mobiles', 'mobiles'),
 (3, NULL, 'Fashion', 'fashion');
+
+-- Seed default settings data
+INSERT IGNORE INTO homepage_settings (setting_key, setting_value) VALUES 
+('site_name', 'TechHat'),
+('footer_description', 'Best electronics shop in Bangladesh.'),
+('footer_address', '123, Tech Street, Dhaka'),
+('footer_phone', '+880 1234 567890'),
+('footer_email', 'support@techhat.com'),
+('social_facebook', 'https://facebook.com'),
+('social_twitter', 'https://twitter.com'),
+('logo_url', 'assets/images/logo.png');

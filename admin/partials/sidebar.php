@@ -4,6 +4,7 @@ $menu = [
     ['href' => 'index.php', 'label' => 'Dashboard', 'icon' => 'bi-speedometer2'],
     ['href' => 'products.php', 'label' => 'Products', 'icon' => 'bi-box-seam'],
     ['href' => 'categories.php', 'label' => 'Categories', 'icon' => 'bi-grid-fill'],
+    ['href' => 'brands.php', 'label' => 'Brands', 'icon' => 'bi-tag-fill'],
     ['href' => 'orders.php', 'label' => 'Orders', 'icon' => 'bi-receipt'],
     ['href' => 'pos.php', 'label' => 'POS System', 'icon' => 'bi-calculator'],
     ['href' => 'purchases.php', 'label' => 'Purchases', 'icon' => 'bi-cart-plus'],
