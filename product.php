@@ -1094,6 +1094,88 @@ require_once 'includes/header.php';
         </div>
 
     </div>
+
+    <!-- Related Products Section -->
+    <div class="mt-12 bg-gray-50 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8">Related Products</h2>
+            
+            <?php
+            // Fetch related products from same category
+            $relatedStmt = $pdo->prepare("
+                SELECT p.id, p.title, p.slug, p.price, p.description
+                FROM products p
+                WHERE p.category_id = ? AND p.id != ? AND p.is_active = 1
+                LIMIT 8
+            ");
+            $relatedStmt->execute([$product['category_id'], $product['id']]);
+            $relatedProducts = $relatedStmt->fetchAll();
+            ?>
+            
+            <?php if (!empty($relatedProducts)): ?>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <?php foreach ($relatedProducts as $relProduct): ?>
+                <div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                    <!-- Product Image -->
+                    <div class="relative h-48 bg-gray-100 overflow-hidden group">
+                        <?php
+                        // Get product image
+                        $imgStmt = $pdo->prepare("SELECT image_path FROM product_images WHERE product_id = ? LIMIT 1");
+                        $imgStmt->execute([$relProduct['id']]);
+                        $img = $imgStmt->fetch();
+                        $imgPath = $img ? $img['image_path'] : 'assets/images/placeholder.png';
+                        ?>
+                        <img src="<?php echo htmlspecialchars($imgPath); ?>" 
+                             alt="<?php echo htmlspecialchars($relProduct['title']); ?>" 
+                             class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
+                        <a href="product.php?slug=<?php echo urlencode($relProduct['slug']); ?>" 
+                           class="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors"></a>
+                    </div>
+                    
+                    <!-- Product Info -->
+                    <div class="p-4">
+                        <a href="product.php?slug=<?php echo urlencode($relProduct['slug']); ?>" class="hover:text-blue-600 transition-colors">
+                            <h3 class="text-sm font-semibold text-gray-900 line-clamp-2 mb-2">
+                                <?php echo htmlspecialchars($relProduct['title']); ?>
+                            </h3>
+                        </a>
+                        
+                        <!-- Price -->
+                        <div class="mb-4">
+                            <?php
+                            // Get variant price for this product
+                            $priceStmt = $pdo->prepare("SELECT price, offer_price FROM product_variants WHERE product_id = ? LIMIT 1");
+                            $priceStmt->execute([$relProduct['id']]);
+                            $priceData = $priceStmt->fetch();
+                            $basePrice = $priceData['price'] ?? 0;
+                            $offerPrice = $priceData['offer_price'] ?? null;
+                            $displayPrice = $offerPrice ?? $basePrice;
+                            ?>
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg font-bold text-gray-900">৳<?php echo number_format($displayPrice); ?></span>
+                                <?php if ($offerPrice && $offerPrice < $basePrice): ?>
+                                <span class="text-sm text-gray-500 line-through">৳<?php echo number_format($basePrice); ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        
+                        <!-- View Details Button -->
+                        <a href="product.php?slug=<?php echo urlencode($relProduct['slug']); ?>" 
+                           class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php else: ?>
+            <div class="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
+                <p class="text-gray-500">No related products found.</p>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
 </div>
 
 <?php include 'includes/footer.php'; ?>
