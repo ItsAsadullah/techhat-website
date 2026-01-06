@@ -8,6 +8,26 @@ if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
+// Helper function to fetch variant from either table
+function getVariantData($pdo, $variant_id, $columns = '*') {
+    $stmt = $pdo->prepare("SELECT $columns FROM product_variations WHERE id = ? UNION ALL SELECT $columns FROM product_variants_legacy WHERE id = ?");
+    $stmt->execute([$variant_id, $variant_id]);
+    return $stmt->fetch();
+}
+
+// Helper function to fetch multiple variants
+function getVariantsData($pdo, $variant_ids) {
+    if (empty($variant_ids)) return [];
+    $placeholders = implode(',', array_fill(0, count($variant_ids), '?'));
+    $stmt = $pdo->prepare("
+        SELECT id, price, offer_price FROM product_variations WHERE id IN ($placeholders)
+        UNION ALL
+        SELECT id, price, offer_price FROM product_variants_legacy WHERE id IN ($placeholders)
+    ");
+    $stmt->execute(array_merge($variant_ids, $variant_ids));
+    return $stmt->fetchAll();
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
@@ -17,9 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($variant_id > 0) {
             // Check stock availability
-            $stmt = $pdo->prepare("SELECT stock_quantity FROM product_variants WHERE id = ?");
-            $stmt->execute([$variant_id]);
-            $variant = $stmt->fetch();
+            $variant = getVariantData($pdo, $variant_id, 'stock_quantity');
             
             $newQty = ($_SESSION['cart'][$variant_id] ?? 0) + $qty;
             
@@ -41,10 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $total = 0;
             if (!empty($_SESSION['cart'])) {
                 $variantIds = array_keys($_SESSION['cart']);
-                $placeholders = implode(',', array_fill(0, count($variantIds), '?'));
-                $stmt = $pdo->prepare("SELECT id, price, offer_price FROM product_variants WHERE id IN ($placeholders)");
-                $stmt->execute($variantIds);
-                $variants = $stmt->fetchAll();
+                $variants = getVariantsData($pdo, $variantIds);
                 foreach ($variants as $v) {
                     $price = $v['offer_price'] > 0 ? $v['offer_price'] : $v['price'];
                     $total += $price * $_SESSION['cart'][$v['id']];
@@ -73,9 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if (isset($_SESSION['cart'][$variant_id])) {
             // Check stock availability
-            $stmt = $pdo->prepare("SELECT stock_quantity FROM product_variants WHERE id = ?");
-            $stmt->execute([$variant_id]);
-            $variant = $stmt->fetch();
+            $variant = getVariantData($pdo, $variant_id, 'stock_quantity');
             
             if ($variant && $qty > $variant['stock_quantity']) {
                 echo json_encode([
@@ -94,10 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $total = 0;
             if (!empty($_SESSION['cart'])) {
                 $variantIds = array_keys($_SESSION['cart']);
-                $placeholders = implode(',', array_fill(0, count($variantIds), '?'));
-                $stmt = $pdo->prepare("SELECT id, price, offer_price FROM product_variants WHERE id IN ($placeholders)");
-                $stmt->execute($variantIds);
-                $variants = $stmt->fetchAll();
+                $variants = getVariantsData($pdo, $variantIds);
                 foreach ($variants as $v) {
                     $price = $v['offer_price'] > 0 ? $v['offer_price'] : $v['price'];
                     $total += $price * $_SESSION['cart'][$v['id']];
@@ -132,10 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $total = 0;
             if (!empty($_SESSION['cart'])) {
                 $variantIds = array_keys($_SESSION['cart']);
-                $placeholders = implode(',', array_fill(0, count($variantIds), '?'));
-                $stmt = $pdo->prepare("SELECT id, price, offer_price FROM product_variants WHERE id IN ($placeholders)");
-                $stmt->execute($variantIds);
-                $variants = $stmt->fetchAll();
+                $variants = getVariantsData($pdo, $variantIds);
                 foreach ($variants as $v) {
                     $price = $v['offer_price'] > 0 ? $v['offer_price'] : $v['price'];
                     $total += $price * $_SESSION['cart'][$v['id']];

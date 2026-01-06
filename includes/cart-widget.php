@@ -8,8 +8,12 @@ if (!empty($_SESSION['cart'])) {
     
     $variantIds = array_keys($_SESSION['cart']);
     $placeholders = implode(',', array_fill(0, count($variantIds), '?'));
-    $stmtCart = $pdo->prepare("SELECT id, price, offer_price FROM product_variants WHERE id IN ($placeholders)");
-    $stmtCart->execute($variantIds);
+    $stmtCart = $pdo->prepare("
+        SELECT id, price, offer_price FROM product_variations WHERE id IN ($placeholders)
+        UNION ALL
+        SELECT id, price, offer_price FROM product_variants_legacy WHERE id IN ($placeholders)
+    ");
+    $stmtCart->execute(array_merge($variantIds, $variantIds));
     $cartVariants = $stmtCart->fetchAll(PDO::FETCH_ASSOC);
     
     foreach ($cartVariants as $cv) {

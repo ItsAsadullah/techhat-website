@@ -36,12 +36,26 @@ function adjustStock(
 
         $stmt = $pdo->prepare("
             SELECT stock_quantity, product_id
-            FROM product_variants
+            FROM product_variations
             WHERE id = ?
             FOR UPDATE
         ");
         $stmt->execute([$variant_id]);
         $variant = $stmt->fetch();
+        $table_name = 'product_variations';
+
+        if (!$variant) {
+            // Try legacy table if not found in new table
+            $stmt = $pdo->prepare("
+                SELECT stock_quantity, product_id
+                FROM product_variants_legacy
+                WHERE id = ?
+                FOR UPDATE
+            ");
+            $stmt->execute([$variant_id]);
+            $variant = $stmt->fetch();
+            $table_name = 'product_variants_legacy';
+        }
 
         if (!$variant) {
             throw new Exception('Variant not found');
@@ -58,7 +72,7 @@ function adjustStock(
             : $currentStock - $quantity;
 
         $pdo->prepare("
-            UPDATE product_variants
+            UPDATE $table_name
             SET stock_quantity = ?
             WHERE id = ?
         ")->execute([$newStock, $variant_id]);

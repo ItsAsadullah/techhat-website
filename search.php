@@ -46,14 +46,14 @@ if (!empty($selected_cats)) {
 }
 
 // Price filter
-$whereConditions[] = "COALESCE((SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants WHERE product_id = p.id), 0) >= ?";
+$whereConditions[] = "LEAST(COALESCE((SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variations WHERE product_id = p.id), 999999), COALESCE((SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants_legacy WHERE product_id = p.id), 999999)) >= ?";
 $params[] = $min_price;
-$whereConditions[] = "COALESCE((SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants WHERE product_id = p.id), 999999) <= ?";
+$whereConditions[] = "GREATEST(COALESCE((SELECT MAX(COALESCE(NULLIF(offer_price,0), price)) FROM product_variations WHERE product_id = p.id), 0), COALESCE((SELECT MAX(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants_legacy WHERE product_id = p.id), 0)) <= ?";
 $params[] = $max_price;
 
 // Stock filter
 if ($in_stock_only) {
-    $whereConditions[] = "(SELECT SUM(stock_quantity) FROM product_variants WHERE product_id = p.id) > 0";
+    $whereConditions[] = "(COALESCE((SELECT SUM(stock_quantity) FROM product_variations WHERE product_id = p.id), 0) + COALESCE((SELECT SUM(stock_quantity) FROM product_variants_legacy WHERE product_id = p.id), 0)) > 0";
 }
 
 $sqlWhere = "WHERE " . implode(' AND ', $whereConditions);
@@ -84,10 +84,10 @@ $total_pages = ceil($total_products / $per_page);
 $sql = "SELECT p.*, 
     (SELECT image_path FROM product_images WHERE product_id = p.id AND is_thumbnail = 1 LIMIT 1) as thumb,
     (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image,
-    (SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants WHERE product_id = p.id) as min_effective,
-    (SELECT MAX(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants WHERE product_id = p.id) as max_effective,
-    (SELECT MIN(price) FROM product_variants WHERE product_id = p.id) as min_regular,
-    (SELECT SUM(stock_quantity) FROM product_variants WHERE product_id = p.id) as total_stock,
+    LEAST(COALESCE((SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variations WHERE product_id = p.id), 999999), COALESCE((SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants_legacy WHERE product_id = p.id), 999999)) as min_effective,
+    GREATEST(COALESCE((SELECT MAX(COALESCE(NULLIF(offer_price,0), price)) FROM product_variations WHERE product_id = p.id), 0), COALESCE((SELECT MAX(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants_legacy WHERE product_id = p.id), 0)) as max_effective,
+    LEAST(COALESCE((SELECT MIN(price) FROM product_variations WHERE product_id = p.id), 999999), COALESCE((SELECT MIN(price) FROM product_variants_legacy WHERE product_id = p.id), 999999)) as min_regular,
+    (COALESCE((SELECT SUM(stock_quantity) FROM product_variations WHERE product_id = p.id), 0) + COALESCE((SELECT SUM(stock_quantity) FROM product_variants_legacy WHERE product_id = p.id), 0)) as total_stock,
     b.name as brand_name,
     c.name as category_name
     FROM products p

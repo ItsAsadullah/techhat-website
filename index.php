@@ -21,9 +21,9 @@ $banners = $bannersStmt->fetchAll();
 // Fetch Latest Products - Optimized (Only 12 products for faster load)
 $sql = "SELECT p.id, p.title, p.slug,
     (SELECT image_path FROM product_images WHERE product_id = p.id LIMIT 1) as thumb,
-    (SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants WHERE product_id = p.id) as min_effective,
-    (SELECT MAX(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants WHERE product_id = p.id) as max_effective,
-    (SELECT MIN(price) FROM product_variants WHERE product_id = p.id) as min_regular
+    LEAST(COALESCE((SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variations WHERE product_id = p.id), 999999), COALESCE((SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants_legacy WHERE product_id = p.id), 999999)) as min_effective,
+    GREATEST(COALESCE((SELECT MAX(COALESCE(NULLIF(offer_price,0), price)) FROM product_variations WHERE product_id = p.id), 0), COALESCE((SELECT MAX(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants_legacy WHERE product_id = p.id), 0)) as max_effective,
+    LEAST(COALESCE((SELECT MIN(price) FROM product_variations WHERE product_id = p.id), 999999), COALESCE((SELECT MIN(price) FROM product_variants_legacy WHERE product_id = p.id), 999999)) as min_regular
     FROM products p 
     ORDER BY p.id DESC LIMIT 12";
 $stmtProd = $pdo->query($sql);

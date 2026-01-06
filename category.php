@@ -22,21 +22,21 @@ if ($isOffers) {
     $sql = "SELECT p.*, b.name as brand_name,
         (SELECT image_path FROM product_images WHERE product_id = p.id AND is_thumbnail = 1 LIMIT 1) as thumb,
         (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image,
-        (SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants WHERE product_id = p.id) as min_effective,
-        (SELECT MAX(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants WHERE product_id = p.id) as max_effective,
-        (SELECT MIN(price) FROM product_variants WHERE product_id = p.id) as min_regular,
-        (SELECT SUM(stock_quantity) FROM product_variants WHERE product_id = p.id) as total_stock,
+        LEAST(COALESCE((SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variations WHERE product_id = p.id), 999999), COALESCE((SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants_legacy WHERE product_id = p.id), 999999)) as min_effective,
+        GREATEST(COALESCE((SELECT MAX(COALESCE(NULLIF(offer_price,0), price)) FROM product_variations WHERE product_id = p.id), 0), COALESCE((SELECT MAX(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants_legacy WHERE product_id = p.id), 0)) as max_effective,
+        LEAST(COALESCE((SELECT MIN(price) FROM product_variations WHERE product_id = p.id), 999999), COALESCE((SELECT MIN(price) FROM product_variants_legacy WHERE product_id = p.id), 999999)) as min_regular,
+        (COALESCE((SELECT SUM(stock_quantity) FROM product_variations WHERE product_id = p.id), 0) + COALESCE((SELECT SUM(stock_quantity) FROM product_variants_legacy WHERE product_id = p.id), 0)) as total_stock,
         (SELECT COALESCE(fsi.discount_percentage, fs.discount_percentage) FROM flash_sale_items fsi JOIN flash_sales fs ON fs.id = fsi.flash_sale_id WHERE fsi.product_id = p.id AND fs.is_active = 1 AND (fs.start_at IS NULL OR fs.start_at <= NOW()) AND (fs.end_at IS NULL OR fs.end_at >= NOW()) ORDER BY fs.end_at ASC LIMIT 1) as flash_discount
         FROM products p
         LEFT JOIN brands b ON p.brand_id = b.id
-        WHERE (SELECT COUNT(*) FROM product_variants WHERE product_id = p.id AND offer_price > 0) > 0";
+        WHERE ((SELECT COUNT(*) FROM product_variations WHERE product_id = p.id AND offer_price > 0) > 0 OR (SELECT COUNT(*) FROM product_variants_legacy WHERE product_id = p.id AND offer_price > 0) > 0)";
     
     // Apply filters
     if ($brandFilter) {
         $sql .= " AND p.brand_id = :brand_id";
     }
     if ($inStock) {
-        $sql .= " AND (SELECT SUM(stock_quantity) FROM product_variants WHERE product_id = p.id) > 0";
+        $sql .= " AND (COALESCE((SELECT SUM(stock_quantity) FROM product_variations WHERE product_id = p.id), 0) + COALESCE((SELECT SUM(stock_quantity) FROM product_variants_legacy WHERE product_id = p.id), 0)) > 0";
     }
     
     // Apply sorting
@@ -85,10 +85,10 @@ if ($isOffers) {
     $sql = "SELECT p.*, b.name as brand_name,
         (SELECT image_path FROM product_images WHERE product_id = p.id AND is_thumbnail = 1 LIMIT 1) as thumb,
         (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image,
-        (SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants WHERE product_id = p.id) as min_effective,
-        (SELECT MAX(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants WHERE product_id = p.id) as max_effective,
-        (SELECT MIN(price) FROM product_variants WHERE product_id = p.id) as min_regular,
-        (SELECT SUM(stock_quantity) FROM product_variants WHERE product_id = p.id) as total_stock,
+        LEAST(COALESCE((SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variations WHERE product_id = p.id), 999999), COALESCE((SELECT MIN(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants_legacy WHERE product_id = p.id), 999999)) as min_effective,
+        GREATEST(COALESCE((SELECT MAX(COALESCE(NULLIF(offer_price,0), price)) FROM product_variations WHERE product_id = p.id), 0), COALESCE((SELECT MAX(COALESCE(NULLIF(offer_price,0), price)) FROM product_variants_legacy WHERE product_id = p.id), 0)) as max_effective,
+        LEAST(COALESCE((SELECT MIN(price) FROM product_variations WHERE product_id = p.id), 999999), COALESCE((SELECT MIN(price) FROM product_variants_legacy WHERE product_id = p.id), 999999)) as min_regular,
+        (COALESCE((SELECT SUM(stock_quantity) FROM product_variations WHERE product_id = p.id), 0) + COALESCE((SELECT SUM(stock_quantity) FROM product_variants_legacy WHERE product_id = p.id), 0)) as total_stock,
         (SELECT COALESCE(fsi.discount_percentage, fs.discount_percentage) FROM flash_sale_items fsi JOIN flash_sales fs ON fs.id = fsi.flash_sale_id WHERE fsi.product_id = p.id AND fs.is_active = 1 AND (fs.start_at IS NULL OR fs.start_at <= NOW()) AND (fs.end_at IS NULL OR fs.end_at >= NOW()) ORDER BY fs.end_at ASC LIMIT 1) as flash_discount
         FROM products p
         LEFT JOIN brands b ON p.brand_id = b.id
@@ -99,7 +99,7 @@ if ($isOffers) {
         $sql .= " AND p.brand_id = :brand_id";
     }
     if ($inStock) {
-        $sql .= " AND (SELECT SUM(stock_quantity) FROM product_variants WHERE product_id = p.id) > 0";
+        $sql .= " AND (COALESCE((SELECT SUM(stock_quantity) FROM product_variations WHERE product_id = p.id), 0) + COALESCE((SELECT SUM(stock_quantity) FROM product_variants_legacy WHERE product_id = p.id), 0)) > 0";
     }
     
     // Apply sorting

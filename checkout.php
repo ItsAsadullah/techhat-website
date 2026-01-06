@@ -27,11 +27,17 @@ $placeholders = implode(',', array_fill(0, count($ids), '?'));
 $stmt = $pdo->prepare(
     "SELECT v.id as variant_id, v.name as variant_name, v.price, v.offer_price, v.product_id,
             p.title, p.slug
-     FROM product_variants v
+     FROM product_variations v
+     JOIN products p ON p.id = v.product_id
+     WHERE v.id IN ($placeholders)
+     UNION ALL
+     SELECT v.id as variant_id, v.name as variant_name, v.price, v.offer_price, v.product_id,
+            p.title, p.slug
+     FROM product_variants_legacy v
      JOIN products p ON p.id = v.product_id
      WHERE v.id IN ($placeholders)"
 );
-$stmt->execute($ids);
+$stmt->execute(array_merge($ids, $ids));
 $variants = $stmt->fetchAll();
 
 $total = 0;

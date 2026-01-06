@@ -78,9 +78,13 @@ if (empty($images)) {
     $images[] = ['image_path' => 'assets/images/placeholder.png'];
 }
 
-// Fetch Variants
-$stmtVar = $pdo->prepare("SELECT * FROM product_variants WHERE product_id = ? AND status = 1");
-$stmtVar->execute([$product['id']]);
+// Fetch Variants - from new system first, fallback to legacy
+$stmtVar = $pdo->prepare("
+    SELECT pv.* FROM product_variations pv WHERE pv.product_id = ? AND pv.status = 1
+    UNION ALL
+    SELECT pvl.* FROM product_variants_legacy pvl WHERE pvl.product_id = ? AND pvl.status = 1
+");
+$stmtVar->execute([$product['id'], $product['id']]);
 $variants = $stmtVar->fetchAll();
 
 // Flash Sale Logic
@@ -207,6 +211,51 @@ $avg_rating = 0;
 $total_reviews = count($reviews);
 if ($total_reviews > 0) {
     $avg_rating = array_sum(array_column($reviews, 'rating')) / $total_reviews;
+}
+
+// Fetch Related Products (Same Category)
+$related_products = [];
+if ($product['category_id']) {
+    $stmtRelated = $pdo->prepare("
+        SELECT p.id, p.title, p.slug, p.badge_text
+        FROM products p
+        WHERE p.category_id = ? AND p.id != ? AND p.is_active = 1
+        ORDER BY p.created_at DESC
+        LIMIT 8
+    ");
+    $stmtRelated->execute([$product['category_id'], $product['id']]);
+    $related_products = $stmtRelated->fetchAll();
+    
+    // Fetch pricing and images for related products
+    foreach ($related_products as &$rp) {
+        // Get cheapest variant price (no status filter to ensure we get data)
+        $stmtPrice = $pdo->prepare("
+            SELECT MIN(CASE WHEN offer_price > 0 THEN offer_price ELSE price END) as final_price,
+                   MIN(price) as base_price
+            FROM product_variations 
+            WHERE product_id = ?
+            UNION ALL
+            SELECT MIN(CASE WHEN offer_price > 0 THEN offer_price ELSE price END) as final_price,
+                   MIN(price) as base_price
+            FROM product_variants_legacy 
+            WHERE product_id = ?
+        ");
+        $stmtPrice->execute([$rp['id'], $rp['id']]);
+        $priceData = $stmtPrice->fetch();
+        $rp['price'] = $priceData['base_price'] ?? 0;
+        $rp['offer_price'] = null;
+        
+        // Check if offer price exists and is different
+        if ($priceData && $priceData['base_price'] && $priceData['final_price'] < $priceData['base_price']) {
+            $rp['offer_price'] = $priceData['final_price'];
+        }
+        
+        // Get primary image
+        $stmtImg = $pdo->prepare("SELECT image_path FROM product_images WHERE product_id = ? ORDER BY is_primary DESC, sort_order ASC LIMIT 1");
+        $stmtImg->execute([$rp['id']]);
+        $img = $stmtImg->fetch();
+        $rp['image'] = $img ? $img['image_path'] : 'assets/images/placeholder.png';
+    }
 }
 
 // Fetch All Settings (Delivery, Return, Warranty, etc.)
@@ -959,6 +1008,7 @@ require_once 'includes/header.php';
                     <a href="#specification" class="nav-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-600 transition-colors">Specification</a>
                     <a href="#description" class="nav-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-600 transition-colors">Description</a>
                     <a href="#reviews" class="nav-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-600 transition-colors">Reviews (<?php echo $total_reviews; ?>)</a>
+                    <a href="#related-products" class="nav-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-600 transition-colors">Related Products</a>
                 </nav>
             </div>
         </div>
@@ -1091,91 +1141,88 @@ require_once 'includes/header.php';
                 </div>
             </section>
 
-        </div>
+            <hr class="border-gray-200">
 
-    </div>
-
-    <!-- Related Products Section -->
-    <div class="mt-12 bg-gray-50 py-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 class="text-3xl font-bold text-gray-900 mb-8">Related Products</h2>
-            
-            <?php
-            // Fetch related products from same category
-            $relatedStmt = $pdo->prepare("
-                SELECT p.id, p.title, p.slug, p.price, p.description
-                FROM products p
-                WHERE p.category_id = ? AND p.id != ? AND p.is_active = 1
-                LIMIT 8
-            ");
-            $relatedStmt->execute([$product['category_id'], $product['id']]);
-            $relatedProducts = $relatedStmt->fetchAll();
-            ?>
-            
-            <?php if (!empty($relatedProducts)): ?>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <?php foreach ($relatedProducts as $relProduct): ?>
-                <div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                    <!-- Product Image -->
-                    <div class="relative h-48 bg-gray-100 overflow-hidden group">
-                        <?php
-                        // Get product image
-                        $imgStmt = $pdo->prepare("SELECT image_path FROM product_images WHERE product_id = ? LIMIT 1");
-                        $imgStmt->execute([$relProduct['id']]);
-                        $img = $imgStmt->fetch();
-                        $imgPath = $img ? $img['image_path'] : 'assets/images/placeholder.png';
-                        ?>
-                        <img src="<?php echo htmlspecialchars($imgPath); ?>" 
-                             alt="<?php echo htmlspecialchars($relProduct['title']); ?>" 
-                             class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
-                        <a href="product.php?slug=<?php echo urlencode($relProduct['slug']); ?>" 
-                           class="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors"></a>
-                    </div>
-                    
-                    <!-- Product Info -->
-                    <div class="p-4">
-                        <a href="product.php?slug=<?php echo urlencode($relProduct['slug']); ?>" class="hover:text-blue-600 transition-colors">
-                            <h3 class="text-sm font-semibold text-gray-900 line-clamp-2 mb-2">
-                                <?php echo htmlspecialchars($relProduct['title']); ?>
-                            </h3>
-                        </a>
-                        
-                        <!-- Price -->
-                        <div class="mb-4">
-                            <?php
-                            // Get variant price for this product
-                            $priceStmt = $pdo->prepare("SELECT price, offer_price FROM product_variants WHERE product_id = ? LIMIT 1");
-                            $priceStmt->execute([$relProduct['id']]);
-                            $priceData = $priceStmt->fetch();
-                            $basePrice = $priceData['price'] ?? 0;
-                            $offerPrice = $priceData['offer_price'] ?? null;
-                            $displayPrice = $offerPrice ?? $basePrice;
-                            ?>
-                            <div class="flex items-center gap-2">
-                                <span class="text-lg font-bold text-gray-900">৳<?php echo number_format($displayPrice); ?></span>
-                                <?php if ($offerPrice && $offerPrice < $basePrice): ?>
-                                <span class="text-sm text-gray-500 line-through">৳<?php echo number_format($basePrice); ?></span>
+            <!-- Related Products Section -->
+            <?php if (!empty($related_products)): ?>
+            <section id="related-products" class="scroll-mt-24">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Related Products</h2>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <?php foreach ($related_products as $rp): ?>
+                        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                            <!-- Image -->
+                            <div class="relative h-48 bg-gray-100 overflow-hidden group">
+                                <img src="<?php echo htmlspecialchars($rp['image']); ?>" 
+                                     alt="<?php echo htmlspecialchars($rp['title']); ?>"
+                                     class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
+                                
+                                <?php if (!empty($rp['badge_text'])): ?>
+                                    <span class="absolute top-2 right-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full uppercase">
+                                        <?php echo htmlspecialchars($rp['badge_text']); ?>
+                                    </span>
                                 <?php endif; ?>
+                                
+                                <!-- Quick View Overlay -->
+                                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
+                                    <a href="product.php?slug=<?php echo htmlspecialchars($rp['slug']); ?>" 
+                                       class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white text-gray-900 px-4 py-2 rounded-full font-semibold hover:bg-gray-100 flex items-center gap-2">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Product Info -->
+                            <div class="p-4">
+                                <h3 class="font-semibold text-gray-900 text-sm line-clamp-2 mb-3">
+                                    <a href="product.php?slug=<?php echo htmlspecialchars($rp['slug']); ?>" 
+                                       class="hover:text-blue-600 transition-colors">
+                                        <?php echo htmlspecialchars($rp['title']); ?>
+                                    </a>
+                                </h3>
+
+                                <!-- Price -->
+                                <div class="mb-3">
+                                    <div class="flex items-baseline gap-2">
+                                        <span class="text-lg font-bold text-blue-600">
+                                            ৳<?php echo number_format($rp['offer_price'] && $rp['offer_price'] > 0 ? $rp['offer_price'] : $rp['price']); ?>
+                                        </span>
+                                        <?php if ($rp['offer_price'] && $rp['offer_price'] > 0 && $rp['offer_price'] < $rp['price']): ?>
+                                            <span class="text-sm text-gray-400 line-through">
+                                                ৳<?php echo number_format($rp['price']); ?>
+                                            </span>
+                                            <span class="text-xs font-semibold text-white bg-red-500 rounded px-1.5 py-0.5">
+                                                -<?php echo round(((($rp['price'] - $rp['offer_price']) / $rp['price']) * 100)); ?>%
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <!-- Add to Cart Button -->
+                                <a href="product.php?slug=<?php echo htmlspecialchars($rp['slug']); ?>" 
+                                   class="w-full block text-center bg-blue-600 text-white py-2 rounded-md font-medium hover:bg-blue-700 transition-colors text-sm">
+                                    View Details
+                                </a>
                             </div>
                         </div>
-                        
-                        <!-- View Details Button -->
-                        <a href="product.php?slug=<?php echo urlencode($relProduct['slug']); ?>" 
-                           class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
-                            View Details
-                        </a>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
-                <?php endforeach; ?>
-            </div>
+            </section>
             <?php else: ?>
-            <div class="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
-                <p class="text-gray-500">No related products found.</p>
-            </div>
+            <!-- No Related Products Message -->
+            <section id="related-products" class="scroll-mt-24">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Related Products</h2>
+                <div class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200 p-8 text-center">
+                    <i class="bi bi-inbox text-4xl text-gray-400 mb-3 block"></i>
+                    <p class="text-gray-600 font-medium">No related products available in this category.</p>
+                    <p class="text-sm text-gray-500 mt-2">Check out our other categories for more products.</p>
+                </div>
+            </section>
             <?php endif; ?>
-        </div>
-    </div>
 
+        </div>
+
+    </div>
 </div>
 
 <?php include 'includes/footer.php'; ?>

@@ -77,7 +77,7 @@ try {
     $stmtWishlist = $pdo->prepare("
         SELECT w.*, p.title, p.slug, p.id as product_id,
         (SELECT image_path FROM product_images WHERE product_id = p.id LIMIT 1) as thumb,
-        (SELECT MIN(price) FROM product_variants WHERE product_id = p.id) as price
+        LEAST(COALESCE((SELECT MIN(price) FROM product_variations WHERE product_id = p.id), 999999), COALESCE((SELECT MIN(price) FROM product_variants_legacy WHERE product_id = p.id), 999999)) as price
         FROM wishlist w
         JOIN products p ON w.product_id = p.id
         WHERE w.user_id = ?
