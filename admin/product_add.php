@@ -1302,6 +1302,7 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
             allowEmptyOption: true,
             render: {
                 option_create: function(data, escape) {
+                    console.log('🎨 Rendering create option for:', data.input);
                     return '<div class="create-option"><i class="bi bi-plus-circle"></i> Add: <strong>' + escape(data.input) + '</strong></div>';
                 },
                 no_results: function(data, escape) {
@@ -1309,9 +1310,11 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
                 }
             },
             onChange: function(value) {
+                console.log('📝 Category changed:', value);
                 handleCategoryChange(value, level, parentId, this);
             },
             onCreate: function(input, callback) {
+                console.log('🆕 onCreate triggered for:', input, 'parentId:', parentId, 'level:', level);
                 createNewCategory(input, parentId, level, callback);
             }
         });
@@ -1354,33 +1357,48 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
     }
     
     async function createNewCategory(name, parentId, level, callback) {
+        console.log('🔨 createNewCategory called');
+        console.log('   - Name:', name);
+        console.log('   - ParentId:', parentId);
+        console.log('   - Level:', level);
+        console.log('   - Callback type:', typeof callback);
+        
         try {
-            console.log('Creating category:', name, 'parentId:', parentId);
+            const requestBody = {
+                name: name,
+                parent_id: parentId
+            };
+            console.log('📤 Sending request:', requestBody);
             
             const response = await fetch('api/create_category.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: name,
-                    parent_id: parentId
-                })
+                body: JSON.stringify(requestBody)
             });
             
+            console.log('📥 Response status:', response.status, response.statusText);
+            
             if (!response.ok) {
-                console.error('API Error:', response.status, response.statusText);
+                const errorText = await response.text();
+                console.error('❌ API Error Response:', errorText);
                 callback(false);
-                showToast('Error', 'Failed to create category', 'error');
+                showToast('Error', `Failed to create category (${response.status})`, 'error');
                 return null;
             }
             
             const result = await response.json();
-            console.log('Create response:', result);
+            console.log('✅ Create response:', result);
             
             if (result.success) {
+                console.log('✨ Category created successfully, calling callback with:', {
+                    value: result.category.id,
+                    text: result.category.name
+                });
                 callback({ value: result.category.id, text: result.category.name });
                 showToast('Success', `Category "${name}" created successfully`, 'success');
                 return result.category;
             } else {
+                console.error('❌ API returned success=false:', result.message);
                 callback(false);
                 showToast('Error', result.message || 'Failed to create category', 'error');
                 return null;
