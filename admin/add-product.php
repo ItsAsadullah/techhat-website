@@ -6,30 +6,18 @@
  * ================================================================
  */
 
+// Disable browser caching
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 require_once '../core/auth.php';
 require_admin();
 require_once __DIR__ . '/partials/sidebar.php';
 
 // Load necessary data
 $brands = $pdo->query("SELECT id, name FROM brands ORDER BY name")->fetchAll();
-$categories = $pdo->query("SELECT id, name, parent_id FROM categories ORDER BY name")->fetchAll();
 $attributes = $pdo->query("SELECT id, name, type FROM attributes WHERE is_active = 1 ORDER BY name")->fetchAll();
-
-// Build category tree for hierarchical display
-function buildCategoryTree($categories, $parentId = null, $prefix = '') {
-    $tree = [];
-    foreach ($categories as $cat) {
-        if ($cat['parent_id'] == $parentId) {
-            $tree[] = [
-                'id' => $cat['id'],
-                'name' => $prefix . $cat['name']
-            ];
-            $tree = array_merge($tree, buildCategoryTree($categories, $cat['id'], $prefix . '— '));
-        }
-    }
-    return $tree;
-}
-$categoryTree = buildCategoryTree($categories);
 
 // Generate CSRF token
 if (!isset($_SESSION['csrf_token'])) {
@@ -46,7 +34,10 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Product - TechHat Admin</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Add Product - TechHat Admin [v2.0 - Dynamic Categories]</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -84,7 +75,7 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
         <!-- Page Header -->
         <header class="page-header">
             <div>
-                <h1><i class="bi bi-box-seam"></i> Add New Product</h1>
+                <h1><i class="bi bi-box-seam"></i> Add New Product <span style="font-size: 0.75rem; color: #10b981; background: #d1fae5; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">v2.0 Dynamic</span></h1>
                 <p>Create a new product with variations, serial tracking, and mobile scanner support</p>
             </div>
             <div class="header-actions">
@@ -615,6 +606,10 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
     
     // DOM Ready
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 TechHat Add Product v2.0 - Initializing...');
+        console.log('✅ DOM Ready');
+        console.log('📦 TomSelect available:', typeof TomSelect !== 'undefined');
+        
         initTabs();
         initProductType();
         initPriceCalculator();
@@ -625,6 +620,8 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
         initFormSubmit();
         initTomSelect();
         initCategorySystem();
+        
+        console.log('✅ All systems initialized');
     });
     
     /**
