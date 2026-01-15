@@ -1365,10 +1365,7 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
     
     async function createNewCategory(name, parentId, level, callback) {
         console.log('🔨 createNewCategory called');
-        console.log('   - Name:', name);
-        console.log('   - ParentId:', parentId);
-        console.log('   - Level:', level);
-        console.log('   - Callback type:', typeof callback);
+        showLoading(true);
         
         try {
             const requestBody = {
@@ -1395,6 +1392,7 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
             
             const result = await response.json();
             console.log('✅ Create response:', result);
+            showLoading(false);
             
             if (result.success) {
                 console.log('✨ Category created successfully, calling callback with:', {
@@ -1412,6 +1410,7 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
             }
         } catch (error) {
             console.error('Error creating category:', error);
+            showLoading(false);
             callback(false);
             showToast('Error', 'Failed to create category', 'error');
             return null;
