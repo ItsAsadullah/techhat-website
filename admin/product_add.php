@@ -1296,7 +1296,6 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
         
         // Initialize TomSelect with create option
         const tomSelect = new TomSelect('#' + selectId, {
-            create: true,
             createOnBlur: false,
             placeholder: level === 0 ? 'Select or type main category...' : 'Select or add sub-category...',
             allowEmptyOption: true,
@@ -1313,9 +1312,10 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
                 console.log('📝 Category changed:', value);
                 handleCategoryChange(value, level, parentId, this);
             },
-            onCreate: function(input, callback) {
-                console.log('🆕 onCreate triggered for:', input, 'parentId:', parentId, 'level:', level);
+            create: function(input, callback) {
+                console.log('🆕 create callback triggered for:', input, 'parentId:', parentId, 'level:', level);
                 createNewCategory(input, parentId, level, callback);
+                return false; // tell TomSelect we are handling the callback
             }
         });
         
