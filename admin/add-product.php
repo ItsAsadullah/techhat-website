@@ -57,7 +57,7 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="../assets/css/add-product.css">
+    <link rel="stylesheet" href="../assets/css/add-product.css?v=<?= time() ?>">
     
     <!-- QRious for QR Code Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -1261,11 +1261,13 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
     };
     
     function initCategorySystem() {
+        console.log('🔧 Initializing Category System...');
         // Add first category level
         addCategoryLevel(null, 0);
     }
     
     async function addCategoryLevel(parentId, level) {
+        console.log(`📁 Adding category level ${level}, parentId: ${parentId}`);
         const container = document.getElementById('categoryBuilder');
         
         // Create wrapper for this level
@@ -1287,6 +1289,13 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
         
         // Load categories for this level
         const categories = await loadCategories(parentId);
+        console.log(`📂 Loaded ${categories.length} categories for level ${level}`);
+        
+        // Check if TomSelect is available
+        if (typeof TomSelect === 'undefined') {
+            console.error('❌ TomSelect is not loaded!');
+            return;
+        }
         
         // Initialize TomSelect with create option
         const tomSelect = new TomSelect('#' + selectId, {
