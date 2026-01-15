@@ -1302,7 +1302,7 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
             allowEmptyOption: true,
             render: {
                 option_create: function(data, escape) {
-                    return `<div class="create-option" onclick="window.forceCreateCategory('${escape(data.input)}', ${parentId}, ${level}, '${selectId}')">
+                    return `<div class="create-option">
                         <i class="bi bi-plus-circle me-2"></i>Add: <strong>${escape(data.input)}</strong>
                     </div>`;
                 },
@@ -1313,21 +1313,18 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
             onChange: function(value) {
                 console.log('📝 Category changed:', value);
                 handleCategoryChange(value, level, parentId, this);
+            },
+            onCreate: function(input, callback) {
+                console.log('🆕 TomSelect onCreate triggered:', input);
+                createNewCategory(input, parentId, level, (res) => {
+                    if (res) {
+                        callback(res);
+                    } else {
+                        callback(false);
+                    }
+                });
             }
         });
-
-        // Global helper for forced creation if TomSelect callback fails
-        window.forceCreateCategory = async (name, pId, lvl, sId) => {
-            console.log('🚀 Force creating category:', name);
-            const cat = await createNewCategory(name, pId, lvl, (res) => {
-                if(res) {
-                    const ts = categoryState.levels[lvl].select;
-                    ts.addOption({value: res.value, text: res.text});
-                    ts.setValue(res.value);
-                    ts.close();
-                }
-            });
-        };
         
         // Add options
         tomSelect.addOption({ value: '', text: level === 0 ? 'Main Category' : 'Sub Category' });

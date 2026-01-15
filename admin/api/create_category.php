@@ -118,6 +118,7 @@ try {
         ],
         'message' => 'Category created successfully'
     ]);
+    exit;
 
 } catch (PDOException $e) {
     http_response_code(500);
@@ -133,5 +134,3 @@ try {
         'message' => 'Server error: ' . $e->getMessage()
     ]);
 }
-?>
-?>
