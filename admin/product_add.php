@@ -1296,25 +1296,15 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
         
         // Initialize TomSelect with create option
         const tomSelect = new TomSelect('#' + selectId, {
-            create: function(input, callback) {
-                console.log('🆕 create callback triggered for:', input, 'parentId:', parentId, 'level:', level);
-                createNewCategory(input, parentId, level, function(result) {
-                    if (result) {
-                        console.log('✅ Callback succeeded with result:', result);
-                        callback(result);
-                    } else {
-                        console.log('❌ Callback failed');
-                        callback(false);
-                    }
-                });
-                return true; // tell TomSelect we are handling creation
-            },
+            create: true,
             createOnBlur: false,
             placeholder: level === 0 ? 'Select or type main category...' : 'Select or add sub-category...',
             allowEmptyOption: true,
             render: {
                 option_create: function(data, escape) {
-                    return `<div class="create-option"><i class="bi bi-plus-circle me-2"></i>Add: <strong>${escape(data.input)}</strong></div>`;
+                    return `<div class="create-option" onclick="window.forceCreateCategory('${escape(data.input)}', ${parentId}, ${level}, '${selectId}')">
+                        <i class="bi bi-plus-circle me-2"></i>Add: <strong>${escape(data.input)}</strong>
+                    </div>`;
                 },
                 no_results: function(data, escape) {
                     return '<div class="no-results">No categories found. Type to add new.</div>';
@@ -1325,6 +1315,19 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
                 handleCategoryChange(value, level, parentId, this);
             }
         });
+
+        // Global helper for forced creation if TomSelect callback fails
+        window.forceCreateCategory = async (name, pId, lvl, sId) => {
+            console.log('🚀 Force creating category:', name);
+            const cat = await createNewCategory(name, pId, lvl, (res) => {
+                if(res) {
+                    const ts = categoryState.levels[lvl].select;
+                    ts.addOption({value: res.value, text: res.text});
+                    ts.setValue(res.value);
+                    ts.close();
+                }
+            });
+        };
         
         // Add options
         tomSelect.addOption({ value: '', text: level === 0 ? 'Main Category' : 'Sub Category' });
