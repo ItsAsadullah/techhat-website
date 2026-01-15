@@ -28,11 +28,15 @@ try {
     $stmt = $pdo->prepare("INSERT INTO categories (name, slug, parent_id) VALUES (?, ?, ?)");
     $stmt->execute([$name, $slug, $parent_id]);
     
+    $newId = $pdo->lastInsertId();
+    
     echo json_encode([
         'success' => true,
-        'id' => $pdo->lastInsertId(),
-        'name' => $name,
-        'slug' => $slug
+        'data' => [
+            'id' => $newId,
+            'name' => $name,
+            'slug' => $slug
+        ]
     ]);
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);

@@ -24,4 +24,28 @@ try {
 } catch (PDOException $e) {
     echo "sim_type error: " . $e->getMessage() . "\n";
 }
+
+try {
+    // Add ram
+    $pdo->exec("ALTER TABLE product_variants ADD COLUMN ram VARCHAR(50) DEFAULT NULL AFTER sim_type");
+    echo "Added ram to product_variants.\n";
+} catch (PDOException $e) {
+    echo "ram error: " . $e->getMessage() . "\n";
+}
+
+try {
+    // Add display_type
+    $pdo->exec("ALTER TABLE product_variants ADD COLUMN display_type VARCHAR(100) DEFAULT NULL AFTER ram");
+    echo "Added display_type to product_variants.\n";
+} catch (PDOException $e) {
+    echo "display_type error: " . $e->getMessage() . "\n";
+}
+
+try {
+    // Add processor
+    $pdo->exec("ALTER TABLE product_variants ADD COLUMN processor VARCHAR(100) DEFAULT NULL AFTER display_type");
+    echo "Added processor to product_variants.\n";
+} catch (PDOException $e) {
+    echo "processor error: " . $e->getMessage() . "\n";
+}
 ?>

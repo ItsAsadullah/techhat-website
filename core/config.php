@@ -11,7 +11,7 @@ define('BASE_URL', ''); // local & live safe
    =============================== */
 
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'techhat_db');
+define('DB_NAME', 'techhat');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_TIMEZONE', '+00:00');

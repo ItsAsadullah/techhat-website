@@ -6,8 +6,8 @@
  * Parameters: parent_id (optional, null for root categories)
  */
 
-require_once '../core/auth.php';
-require_once '../core/db.php';
+require_once '../../core/auth.php';
+require_once '../../core/db.php';
 
 header('Content-Type: application/json');
 

@@ -5,9 +5,12 @@ try {
     // 1. Add Warranty Columns to Products
     $pdo->exec("ALTER TABLE products ADD COLUMN warranty_type VARCHAR(50) DEFAULT 'No Warranty' AFTER badge_text");
     $pdo->exec("ALTER TABLE products ADD COLUMN warranty_period VARCHAR(50) DEFAULT NULL AFTER warranty_type");
-    echo "Added warranty columns to products table.\n";
+    $pdo->exec("ALTER TABLE products ADD COLUMN warranty_policy TEXT DEFAULT NULL AFTER warranty_period");
+    $pdo->exec("ALTER TABLE products ADD COLUMN return_policy VARCHAR(100) DEFAULT NULL AFTER warranty_policy");
+    $pdo->exec("ALTER TABLE products ADD COLUMN estimated_delivery_time VARCHAR(100) DEFAULT NULL AFTER return_policy");
+    echo "Added warranty, return, and delivery columns to products table.\n";
 } catch (PDOException $e) {
-    echo "Warranty columns might already exist: " . $e->getMessage() . "\n";
+    echo "Columns might already exist: " . $e->getMessage() . "\n";
 }
 
 try {

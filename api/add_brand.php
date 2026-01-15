@@ -24,11 +24,14 @@ try {
     // Insert
     $stmt = $pdo->prepare("INSERT INTO brands (name) VALUES (?)");
     $stmt->execute([$name]);
+    $newId = $pdo->lastInsertId();
     
     echo json_encode([
         'success' => true,
-        'id' => $pdo->lastInsertId(),
-        'name' => $name
+        'data' => [
+            'id' => $newId,
+            'name' => $name
+        ]
     ]);
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);

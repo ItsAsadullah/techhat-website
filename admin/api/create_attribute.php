@@ -6,8 +6,8 @@
  * Parameters: attribute_id, value, color_code (optional)
  */
 
-require_once '../core/auth.php';
-require_once '../core/db.php';
+require_once '../../core/auth.php';
+require_once '../../core/db.php';
 
 header('Content-Type: application/json');
 
@@ -63,10 +63,12 @@ try {
         // Return existing value
         echo json_encode([
             'status' => 'success',
-            'id' => (int)$existing['id'],
-            'value' => $value,
-            'message' => 'Value already exists',
-            'existing' => true
+            'data' => [
+                'id' => (int)$existing['id'],
+                'value' => $value,
+                'existing' => true
+            ],
+            'message' => 'Value already exists'
         ]);
         exit;
     }
@@ -82,10 +84,12 @@ try {
 
     echo json_encode([
         'status' => 'success',
-        'id' => (int)$id,
-        'value' => $value,
-        'color_code' => $color_code,
-        'existing' => false
+        'data' => [
+            'id' => (int)$id,
+            'value' => $value,
+            'color_code' => $color_code,
+            'existing' => false
+        ]
     ]);
 
 } catch (Exception $e) {

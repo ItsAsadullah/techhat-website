@@ -11,8 +11,11 @@ try {
 try {
     $pdo->exec("ALTER TABLE product_variants ADD COLUMN color VARCHAR(50) DEFAULT NULL AFTER name");
     $pdo->exec("ALTER TABLE product_variants ADD COLUMN size VARCHAR(50) DEFAULT NULL AFTER color");
-    echo "Added color and size to product_variants.\n";
+    $pdo->exec("ALTER TABLE product_variants ADD COLUMN storage VARCHAR(50) DEFAULT NULL AFTER size");
+    $pdo->exec("ALTER TABLE product_variants ADD COLUMN material VARCHAR(100) DEFAULT NULL AFTER storage");
+    $pdo->exec("ALTER TABLE product_variants ADD COLUMN style VARCHAR(100) DEFAULT NULL AFTER material");
+    echo "Added color, size, storage, material, and style to product_variants.\n";
 } catch (PDOException $e) {
-    echo "color/size might already exist or error: " . $e->getMessage() . "\n";
+    echo "Columns might already exist or error: " . $e->getMessage() . "\n";
 }
 ?>

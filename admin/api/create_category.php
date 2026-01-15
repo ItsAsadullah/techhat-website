@@ -1,7 +1,8 @@
 <?php
 // api/create_category.php
 header('Content-Type: application/json');
-require_once '../config/db.php'; // আপনার ডাটাবেস ফাইল লিংক করুন
+require_once '../../core/auth.php';
+require_once '../../core/db.php'; // আপনার ডাটাবেস ফাইল লিংক করুন
 
 $data = json_decode(file_get_contents("php://input"), true);
 $name = trim($data['name']);
@@ -26,10 +27,13 @@ if ($stmt->rowCount() > 0) {
     // নতুন তৈরি করুন
     $insert = $pdo->prepare("INSERT INTO categories (name, parent_id) VALUES (?, ?)");
     $insert->execute([$name, $parent_id]);
+    $newId = $pdo->lastInsertId();
     echo json_encode([
         'status' => 'success',
-        'id' => $pdo->lastInsertId(),
-        'name' => $name
+        'data' => [
+            'id' => $newId,
+            'name' => $name
+        ]
     ]);
 }
 ?>

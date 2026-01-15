@@ -44,15 +44,10 @@ try {
         throw new Exception('Product name is required');
     }
     
-    // Get category ID (from last selected category)
-    $categoryId = null;
-    for ($i = 1; $i <= 10; $i++) {
-        if (isset($_POST["category_level_$i"])) {
-            $categoryId = $_POST["category_level_$i"];
-        }
-    }
+    // Get category ID from the hidden input
+    $categoryId = $_POST['category_id'] ?? null;
     
-    if (!$categoryId) {
+    if (empty($categoryId)) {
         throw new Exception('Category is required');
     }
     

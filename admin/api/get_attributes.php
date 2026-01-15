@@ -6,8 +6,8 @@
  * Parameters: category_id
  */
 
-require_once '../core/auth.php';
-require_once '../core/db.php';
+require_once '../../core/auth.php';
+require_once '../../core/db.php';
 
 header('Content-Type: application/json');
 

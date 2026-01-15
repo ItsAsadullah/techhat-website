@@ -46,12 +46,12 @@ if (!empty($_GET['category'])) {
 
 if (!empty($_GET['stock_status'])) {
     if ($_GET['stock_status'] === 'low') {
-        // Check stock from BOTH product_variations (new) and product_variants_legacy (old)
-        $where[] = "(COALESCE((SELECT SUM(stock_quantity) FROM product_variations WHERE product_id = p.id), 0) + COALESCE((SELECT SUM(stock_quantity) FROM product_variants_legacy WHERE product_id = p.id), 0)) < 5";
+        // Check stock from product_variants
+        $where[] = "(COALESCE((SELECT SUM(stock_quantity) FROM product_variants WHERE product_id = p.id), 0)) < 5";
     } elseif ($_GET['stock_status'] === 'out') {
-        $where[] = "(COALESCE((SELECT SUM(stock_quantity) FROM product_variations WHERE product_id = p.id), 0) + COALESCE((SELECT SUM(stock_quantity) FROM product_variants_legacy WHERE product_id = p.id), 0)) <= 0";
+        $where[] = "(COALESCE((SELECT SUM(stock_quantity) FROM product_variants WHERE product_id = p.id), 0)) <= 0";
     } elseif ($_GET['stock_status'] === 'in') {
-        $where[] = "(COALESCE((SELECT SUM(stock_quantity) FROM product_variations WHERE product_id = p.id), 0) + COALESCE((SELECT SUM(stock_quantity) FROM product_variants_legacy WHERE product_id = p.id), 0)) > 0";
+        $where[] = "(COALESCE((SELECT SUM(stock_quantity) FROM product_variants WHERE product_id = p.id), 0)) > 0";
     }
 }
 
@@ -60,10 +60,10 @@ $whereSQL = implode(" AND ", $where);
 // Fetch Products
 $sql = "SELECT p.*, c.name as category_name, 
         (SELECT image_path FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC LIMIT 1) as image_path,
-        (COALESCE((SELECT COUNT(*) FROM product_variations WHERE product_id = p.id), 0) + COALESCE((SELECT COUNT(*) FROM product_variants_legacy WHERE product_id = p.id), 0)) as variant_count,
-        (COALESCE((SELECT SUM(stock_quantity) FROM product_variations WHERE product_id = p.id), 0) + COALESCE((SELECT SUM(stock_quantity) FROM product_variants_legacy WHERE product_id = p.id), 0)) as total_stock,
-        (LEAST(COALESCE((SELECT MIN(price) FROM product_variations WHERE product_id = p.id), 999999), COALESCE((SELECT MIN(price) FROM product_variants_legacy WHERE product_id = p.id), 999999))) as min_price,
-        (GREATEST(COALESCE((SELECT MAX(price) FROM product_variations WHERE product_id = p.id), 0), COALESCE((SELECT MAX(price) FROM product_variants_legacy WHERE product_id = p.id), 0))) as max_price
+        (COALESCE((SELECT COUNT(*) FROM product_variants WHERE product_id = p.id), 0)) as variant_count,
+        (COALESCE((SELECT SUM(stock_quantity) FROM product_variants WHERE product_id = p.id), 0)) as total_stock,
+        (COALESCE((SELECT MIN(price) FROM product_variants WHERE product_id = p.id), 0)) as min_price,
+        (COALESCE((SELECT MAX(price) FROM product_variants WHERE product_id = p.id), 0)) as max_price
         FROM products p 
         LEFT JOIN categories c ON p.category_id = c.id 
         WHERE $whereSQL
