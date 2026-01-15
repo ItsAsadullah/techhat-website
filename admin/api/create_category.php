@@ -9,7 +9,7 @@ $name = trim($data['name']);
 $parent_id = isset($data['parent_id']) && !empty($data['parent_id']) ? $data['parent_id'] : NULL;
 
 if (empty($name)) {
-    echo json_encode(['status' => 'error', 'message' => 'Name required']);
+    echo json_encode(['success' => false, 'message' => 'Name required']);
     exit;
 }
 
@@ -22,18 +22,44 @@ if ($parent_id) {
 }
 
 if ($stmt->rowCount() > 0) {
-    echo json_encode(['status' => 'exists', 'id' => $stmt->fetchColumn()]);
-} else {
-    // নতুন তৈরি করুন
-    $insert = $pdo->prepare("INSERT INTO categories (name, parent_id) VALUES (?, ?)");
-    $insert->execute([$name, $parent_id]);
-    $newId = $pdo->lastInsertId();
+    $existingId = $stmt->fetchColumn();
     echo json_encode([
-        'status' => 'success',
-        'data' => [
-            'id' => $newId,
+        'success' => true,
+        'exists' => true,
+        'category' => [
+            'id' => $existingId,
             'name' => $name
-        ]
+        ],
+        'message' => 'Category already exists'
+    ]);
+} else {
+    // Generate slug
+    $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name), '-'));
+    
+    // Calculate level
+    $level = 0;
+    if ($parent_id) {
+        $levelStmt = $pdo->prepare("SELECT level FROM categories WHERE id = ?");
+        $levelStmt->execute([$parent_id]);
+        $parentLevel = $levelStmt->fetchColumn();
+        $level = $parentLevel + 1;
+    }
+    
+    // Insert new category
+    $insert = $pdo->prepare("INSERT INTO categories (name, slug, parent_id, level, is_active, created_at) VALUES (?, ?, ?, ?, 1, NOW())");
+    $insert->execute([$name, $slug, $parent_id, $level]);
+    $newId = $pdo->lastInsertId();
+    
+    echo json_encode([
+        'success' => true,
+        'category' => [
+            'id' => $newId,
+            'name' => $name,
+            'slug' => $slug,
+            'level' => $level,
+            'parent_id' => $parent_id
+        ],
+        'message' => 'Category created successfully'
     ]);
 }
 ?>

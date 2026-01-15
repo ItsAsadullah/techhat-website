@@ -37,8 +37,8 @@ try {
     $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([
-        'status' => 'success',
-        'data' => $categories,
+        'success' => true,
+        'categories' => $categories,
         'count' => count($categories)
     ]);
 

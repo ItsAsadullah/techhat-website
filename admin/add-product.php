@@ -152,26 +152,24 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
                                     <input type="text" name="name" class="form-input" placeholder="Enter product name" required>
                                 </div>
                                 
-                                <div class="form-row cols-2">
-                                    <div class="form-group">
-                                        <label class="form-label">Category</label>
-                                        <select name="category_id" id="categorySelect" class="form-select">
-                                            <option value="">Select Category</option>
-                                            <?php foreach ($categoryTree as $cat): ?>
-                                            <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Brand</label>
-                                        <select name="brand_id" id="brandSelect" class="form-select">
-                                            <option value="">Select Brand</option>
-                                            <?php foreach ($brands as $brand): ?>
-                                            <option value="<?= $brand['id'] ?>"><?= htmlspecialchars($brand['name']) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
+                                <div class="form-group">
+                                    <label class="form-label">Category Hierarchy</label>
+                                    <div id="categoryBuilder" class="category-builder">
+                                        <!-- Dynamic category selects will be added here -->
                                     </div>
                                 </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Brand</label>
+                                    <select name="brand_id" id="brandSelect" class="form-select">
+                                        <option value="">Select Brand</option>
+                                        <?php foreach ($brands as $brand): ?>
+                                        <option value="<?= $brand['id'] ?>"><?= htmlspecialchars($brand['name']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                
+                                <input type="hidden" name="category_id" id="finalCategoryId">
                                 
                                 <div class="form-group">
                                     <label class="form-label">Description</label>
@@ -626,6 +624,7 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
         initImageUpload();
         initFormSubmit();
         initTomSelect();
+        initCategorySystem();
     });
     
     /**
@@ -653,7 +652,6 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
      */
     function initTomSelect() {
         if (typeof TomSelect !== 'undefined') {
-            new TomSelect('#categorySelect', { create: false, allowEmptyOption: true });
             new TomSelect('#brandSelect', { create: false, allowEmptyOption: true });
         }
     }
@@ -1250,6 +1248,185 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
         
         // Add more validation as needed
         return true;
+    }
+    
+    /**
+     * ================================================================
+     * Dynamic Category System
+     * ================================================================
+     */
+    const categoryState = {
+        levels: [],
+        selectedPath: []
+    };
+    
+    function initCategorySystem() {
+        // Add first category level
+        addCategoryLevel(null, 0);
+    }
+    
+    async function addCategoryLevel(parentId, level) {
+        const container = document.getElementById('categoryBuilder');
+        
+        // Create wrapper for this level
+        const levelWrapper = document.createElement('div');
+        levelWrapper.className = 'category-level';
+        levelWrapper.dataset.level = level;
+        levelWrapper.style.cssText = 'display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem;';
+        
+        // Create select element
+        const selectId = `categorySelect_${level}`;
+        const select = document.createElement('select');
+        select.id = selectId;
+        select.className = 'form-select';
+        select.style.flex = '1';
+        
+        // Add to DOM first
+        levelWrapper.appendChild(select);
+        container.appendChild(levelWrapper);
+        
+        // Load categories for this level
+        const categories = await loadCategories(parentId);
+        
+        // Initialize TomSelect with create option
+        const tomSelect = new TomSelect('#' + selectId, {
+            create: true,
+            createOnBlur: false,
+            placeholder: level === 0 ? 'Select or type main category...' : 'Select or add sub-category...',
+            allowEmptyOption: true,
+            render: {
+                option_create: function(data, escape) {
+                    return '<div class="create-option"><i class="bi bi-plus-circle"></i> Add: <strong>' + escape(data.input) + '</strong></div>';
+                },
+                no_results: function(data, escape) {
+                    return '<div class="no-results">No categories found. Type to add new.</div>';
+                }
+            },
+            onChange: function(value) {
+                handleCategoryChange(value, level, parentId, this);
+            },
+            onCreate: function(input, callback) {
+                createNewCategory(input, parentId, level, callback);
+            }
+        });
+        
+        // Add options
+        tomSelect.addOption({ value: '', text: level === 0 ? 'Main Category' : 'Sub Category' });
+        categories.forEach(cat => {
+            tomSelect.addOption({ value: cat.id, text: cat.name });
+        });
+        
+        // Store reference
+        categoryState.levels[level] = {
+            select: tomSelect,
+            wrapper: levelWrapper,
+            parentId: parentId
+        };
+    }
+    
+    async function loadCategories(parentId) {
+        try {
+            const url = parentId 
+                ? `${CONFIG.baseUrl}/api/get_children.php?parent_id=${parentId}`
+                : `${CONFIG.baseUrl}/api/get_children.php?parent_id=null`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            return data.categories || [];
+        } catch (error) {
+            console.error('Failed to load categories:', error);
+            return [];
+        }
+    }
+    
+    async function createNewCategory(name, parentId, level, callback) {
+        try {
+            const response = await fetch(CONFIG.baseUrl + '/api/create_category.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name,
+                    parent_id: parentId
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                callback({ value: result.category.id, text: result.category.name });
+                showToast('Success', `Category "${name}" created successfully`, 'success');
+                return result.category;
+            } else {
+                callback(false);
+                showToast('Error', result.message || 'Failed to create category', 'error');
+                return null;
+            }
+        } catch (error) {
+            console.error('Error creating category:', error);
+            callback(false);
+            showToast('Error', 'Failed to create category', 'error');
+            return null;
+        }
+    }
+    
+    function handleCategoryChange(categoryId, level, parentId, tomSelectInstance) {
+        // Remove all levels after this one
+        removeSubsequentLevels(level);
+        
+        if (!categoryId) {
+            // If cleared, update final category
+            updateFinalCategory(level > 0 ? parentId : null);
+            return;
+        }
+        
+        // Update selected path
+        categoryState.selectedPath[level] = categoryId;
+        categoryState.selectedPath = categoryState.selectedPath.slice(0, level + 1);
+        
+        // Update final category ID
+        updateFinalCategory(categoryId);
+        
+        // Add "Add Sub Category" button
+        addSubCategoryButton(categoryId, level);
+    }
+    
+    function removeSubsequentLevels(fromLevel) {
+        const container = document.getElementById('categoryBuilder');
+        
+        // Remove all levels after fromLevel
+        for (let i = categoryState.levels.length - 1; i > fromLevel; i--) {
+            if (categoryState.levels[i]) {
+                categoryState.levels[i].select.destroy();
+                categoryState.levels[i].wrapper.remove();
+                categoryState.levels.pop();
+            }
+        }
+    }
+    
+    function addSubCategoryButton(parentId, level) {
+        const levelWrapper = categoryState.levels[level].wrapper;
+        
+        // Remove existing button if any
+        const existingBtn = levelWrapper.querySelector('.add-sub-btn');
+        if (existingBtn) existingBtn.remove();
+        
+        // Create add sub-category button
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-secondary btn-sm add-sub-btn';
+        btn.innerHTML = '<i class="bi bi-plus-lg"></i> Add Sub';
+        btn.style.cssText = 'white-space: nowrap; padding: 0.5rem 1rem;';
+        
+        btn.onclick = function() {
+            addCategoryLevel(parentId, level + 1);
+            btn.remove(); // Remove button after adding level
+        };
+        
+        levelWrapper.appendChild(btn);
+    }
+    
+    function updateFinalCategory(categoryId) {
+        document.getElementById('finalCategoryId').value = categoryId || '';
     }
     
     /**

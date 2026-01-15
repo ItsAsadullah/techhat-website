@@ -685,6 +685,71 @@ body.add-product-page {
 }
 
 /* ================================================================
+   Dynamic Category Builder
+   ================================================================ */
+.category-builder {
+    padding: 0;
+}
+
+.category-level {
+    animation: slideInDown 0.3s ease-out;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.category-level .add-sub-btn {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* TomSelect Custom Styles for Category Builder */
+.category-level .ts-wrapper {
+    flex: 1;
+}
+
+.create-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.create-option i {
+    font-size: 1rem;
+}
+
+.no-results {
+    padding: 0.75rem;
+    text-align: center;
+    color: var(--gray-500);
+    font-size: 0.875rem;
+}
+
+.ts-dropdown .create-option {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.ts-dropdown .create-option:hover {
+    background: var(--primary-bg);
+}
+
+/* ================================================================
    Variations Table
    ================================================================ */
 .variations-table-wrapper {
