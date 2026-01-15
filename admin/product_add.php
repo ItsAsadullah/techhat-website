@@ -1333,11 +1333,19 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
     async function loadCategories(parentId) {
         try {
             const url = parentId 
-                ? `${CONFIG.baseUrl}/api/get_children.php?parent_id=${parentId}`
-                : `${CONFIG.baseUrl}/api/get_children.php?parent_id=null`;
+                ? `api/get_children.php?parent_id=${parentId}`
+                : `api/get_children.php?parent_id=null`;
             
+            console.log('Loading categories from:', url);
             const response = await fetch(url);
+            
+            if (!response.ok) {
+                console.error('API Error:', response.status, response.statusText);
+                return [];
+            }
+            
             const data = await response.json();
+            console.log('API Response:', data);
             return data.categories || [];
         } catch (error) {
             console.error('Failed to load categories:', error);
@@ -1347,7 +1355,9 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
     
     async function createNewCategory(name, parentId, level, callback) {
         try {
-            const response = await fetch(CONFIG.baseUrl + '/api/create_category.php', {
+            console.log('Creating category:', name, 'parentId:', parentId);
+            
+            const response = await fetch('api/create_category.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1356,7 +1366,15 @@ $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_
                 })
             });
             
+            if (!response.ok) {
+                console.error('API Error:', response.status, response.statusText);
+                callback(false);
+                showToast('Error', 'Failed to create category', 'error');
+                return null;
+            }
+            
             const result = await response.json();
+            console.log('Create response:', result);
             
             if (result.success) {
                 callback({ value: result.category.id, text: result.category.name });

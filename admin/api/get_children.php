@@ -12,7 +12,11 @@ require_once '../../core/db.php';
 header('Content-Type: application/json');
 
 try {
-    $parent_id = !empty($_GET['parent_id']) ? (int)$_GET['parent_id'] : null;
+    // Handle parent_id parameter
+    $parent_id = null;
+    if (isset($_GET['parent_id']) && $_GET['parent_id'] !== 'null' && $_GET['parent_id'] !== '') {
+        $parent_id = (int)$_GET['parent_id'];
+    }
 
     if ($parent_id === null) {
         // Fetch root categories (parent_id IS NULL)
@@ -44,6 +48,10 @@ try {
 
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'Database error']);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Database error: ' . $e->getMessage(),
+        'categories' => []
+    ]);
 }
 ?>
